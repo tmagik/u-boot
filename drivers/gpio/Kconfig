@@ -58,6 +58,11 @@ config ATMEL_PIO4
 	  may be dedicated as a general purpose I/O or be assigned to
 	  a function of an embedded peripheral.
 
+config DA8XX_GPIO
+	bool "DA8xx GPIO Driver"
+	help
+	  This driver supports the DA8xx GPIO controller
+
 config INTEL_BROADWELL_GPIO
 	bool "Intel Broadwell GPIO driver"
 	depends on DM
@@ -93,6 +98,17 @@ config LPC32XX_GPIO
 	default n
 	help
 	  Support for the LPC32XX GPIO driver.
+
+config MSCC_SGPIO
+	bool "Microsemi Serial GPIO driver"
+	depends on DM_GPIO && SOC_VCOREIII
+	help
+	  Support for the VCoreIII SoC serial GPIO device. By using a
+          serial interface, the SIO controller significantly extends
+          the number of available GPIOs with a minimum number of
+          additional pins on the device. The primary purpose of the
+          SIO controller is to connect control signals from SFP
+          modules and to act as an LED controller.
 
 config MSM_GPIO
 	bool "Qualcomm GPIO driver"
@@ -185,6 +201,7 @@ config SANDBOX_GPIO_COUNT
 
 config XILINX_GPIO
 	bool "Xilinx GPIO driver"
+	depends on DM_GPIO
 	help
 	  This config enable the Xilinx GPIO driver for Microblaze.
 
@@ -308,4 +325,12 @@ config MPC8XXX_GPIO
 	  Aside from the standard functions of input/output mode, and output
 	  value setting, the open-drain feature, which can configure individual
 	  GPIOs to work as open-drain outputs, is supported.
+
+config MT7621_GPIO
+	bool "MediaTek MT7621 GPIO driver"
+	depends on DM_GPIO && ARCH_MT7620
+	default y
+	help
+	  Say yes here to support MediaTek MT7621 compatible GPIOs.
+
 endmenu

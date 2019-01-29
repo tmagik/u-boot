@@ -65,7 +65,6 @@
 /*-----------------------------------------------------------------------
  * Physical Memory Map
  */
-#define CONFIG_NR_DRAM_BANKS	2
 #define PHYS_SDRAM_1		NV_PA_SDRC_CS0
 #define PHYS_SDRAM_1_SIZE	0x20000000	/* 512M */
 
@@ -88,8 +87,5 @@
 						CONFIG_SPL_TEXT_BASE)
 #define CONFIG_SYS_SPL_MALLOC_SIZE	0x00010000
 #endif
-
-/* Misc utility code */
-#define CONFIG_BOUNCE_BUFFER
 
 #endif /* _TEGRA_COMMON_H_ */
