@@ -4,6 +4,11 @@
  *
  * Authors:
  *   Anup Patel <anup.patel@wdc.com>
+ *
+ * Copyright (C) 2018 Microsemi Corporation.
+ * Padmarao Begari, Microsemi Corporation <padmarao.begari@microsemi.com>
+ * Copyright (C) 2018 SiFive Inc
+ * Troy Benjegerdes, <troy.benjegerdes@sifive.com>
  */
 
 #ifndef __CONFIG_H
@@ -20,7 +25,8 @@
 
 #define CONFIG_SYS_BOOTM_LEN		SZ_16M
 
-#define CONFIG_STANDALONE_LOAD_ADDR	0x80200000
+/* load part way up SDram for FIT images */
+#define CONFIG_STANDALONE_LOAD_ADDR	0xa0000000
 
 /* Environment options */
 #define CONFIG_ENV_SIZE			SZ_4K
@@ -28,6 +34,9 @@
 #define BOOT_TARGET_DEVICES(func) \
 	func(DHCP, dhcp, na)
 
+
+#if 0
+/* Someday I will understand config_distro_bootcmd. Today is not that day */
 #include <config_distro_bootcmd.h>
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
@@ -39,5 +48,27 @@
 	"pxefile_addr_r=0x82400000\0" \
 	"ramdisk_addr_r=0x82500000\0" \
 	BOOTENV
+
+#else
+/* less complicated, works for now */
+
+#define CONFIG_BOOTFILE		"hifiveu.fit"
+#define HIFIVE_BASE_GPIO	0x10060000
+
+#define CONFIG_EXTRA_ENV_SETTINGS       \
+                "ip_dyn=yes\0" \
+                "uboot_version=" __stringify(PLAIN_VERSION) "\0" \
+                "mmcsetup=mmc_spi 1 20000000 0; mmc part\0" \
+                "fdt_high=0xffffffffffffffff\0" \
+                "fdtsetup=fdt addr ${fdtcontroladdr}; fdt chosen;" \
+                        "fdt set /firmware sifive,uboot " __stringify(PLAIN_VERSION) ";" \
+                        "fdt set /chosen bootargs console=ttySIF0,${baudrate}\0" \
+                "fatenv=setenv fileaddr a0000000; fatload mmc 0:1 ${fileaddr} uEnv.txt;" \
+                        "env import -t ${fileaddr} ${filesize}"
+
+#endif
+
+/* 1MHz RTC clock, SiFive FU540-C000 Manual, section 7 */
+#define CONFIG_SYS_HZ_CLOCK     1000000
 
 #endif /* __CONFIG_H */

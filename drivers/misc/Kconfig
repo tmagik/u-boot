@@ -41,6 +41,13 @@ config ROCKCHIP_EFUSE
 	  extended (by porting the read function from the Linux kernel sources)
 	  to support other recent Rockchip devices.
 
+config EMEMORY_OTP
+	bool "Ememory OTP driver"
+	depends on MISC
+	depends on RISCV # make this a proper depend later
+	help
+	  Enable support for reading the Ememory OTP on the HiFive U54 OTP storage.
+
 config VEXPRESS_CONFIG
 	bool "Enable support for Arm Versatile Express config bus"
 	depends on MISC
