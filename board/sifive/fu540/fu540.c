@@ -14,6 +14,7 @@
 
 #include <common.h>
 #include <dm.h>
+#include "ddrregs.h"
 
 DECLARE_GLOBAL_DATA_PTR;
 

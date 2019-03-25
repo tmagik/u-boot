@@ -12,7 +12,7 @@
 #include <command.h>
 #include <watchdog.h>
 #include <asm/cache.h>
-#include <asm/ddrregs.h>
+//#include <asm/ddrregs.h>
 #include <linux/io.h>
 
 struct hifive_prci_regs
@@ -33,6 +33,8 @@ struct hifive_prci_regs
     volatile uint32_t  PROCMONCFG; 	/* 0x00F0 */
 };
 
+#define HIFIVE_BASE_PRCI	0x10000000UL
+
 struct hifive_prci_regs *g_aloe_prci = (struct hifive_prci_regs *)HIFIVE_BASE_PRCI;
 
 static void ddr_writeregmap(const uint32_t *ctlsettings, const uint32_t *physettings);
@@ -41,11 +43,14 @@ static void ddr_setuprangeprotection(size_t end_addr);
 static uint64_t ddr_phy_fixup(void);
 
 #define REG32(p, i) (*(volatile uint32_t *)((p) + (i)))
-#define DDR_CTRL_ADDR 0x100B0000UL
+#define DDR_CTRL_ADDR		0x100B0000UL
 #define DDR_SIZE  (8UL * 1024UL * 1024UL * 1024UL)
 #define ahbregaddr DDR_CTRL_ADDR
 
-int arch_cpu_init(void)
+extern uint32_t DENALI_CTL_DATA[256];
+extern uint32_t DENALI_PHY_DATA[1215];
+
+int dram_init(void)
 {
 
 	const uint64_t ddr_end = CONFIG_SYS_SDRAM_BASE + DDR_SIZE;
@@ -129,6 +134,8 @@ int arch_cpu_init(void)
 	return 0;
 
 }
+
+
 static void ddr_setuprangeprotection(size_t end_addr)
 {
 	REG32(209<<2,ahbregaddr) = 0x0;
@@ -238,10 +245,4 @@ int cleanup_before_linux(void)
 	/* turn off I/D-cache */
 
 	return 0;
-}
-
-int do_reset(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
-{
-	disable_interrupts();
-	panic("HiFive-U540 wdt not support yet.\n");
 }

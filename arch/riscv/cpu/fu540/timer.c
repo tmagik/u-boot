@@ -11,6 +11,9 @@
 #include <asm/io.h>
 #include <asm/encoding.h>
 
+#define HIFIVE_BASE_MTIME	0x0200bff8
+#define HIFIVE_BASE_TIMECMP	0x02004000
+
 #if __riscv_xlen == 64 || __riscv64
 	volatile uint64_t* mtime = (volatile uint64_t*)HIFIVE_BASE_MTIME;
 	volatile uint64_t* timecmp = (volatile uint64_t*)HIFIVE_BASE_TIMECMP;
@@ -44,22 +47,4 @@ void __udelay(unsigned long usec)
 	int start = get_timer(0);
 	while ((get_timer(0) - usec) < start)
             ;
-}
-
-/*
- * This function is derived from PowerPC code (read timebase as long long).
- * On RISC-V it just returns the timer value (uSec since boot)
- */
-unsigned long long get_ticks(void)
-{
-	return get_timer(0);
-}
-
-/*
- * This function is derived from PowerPC code (timebase clock frequency).
- * On RISC-V it returns the number of timer ticks per second.
- */
-ulong get_tbclk(void)
-{
-	return CONFIG_SYS_HZ_CLOCK;
 }
