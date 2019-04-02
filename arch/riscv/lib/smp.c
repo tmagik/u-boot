@@ -74,7 +74,7 @@ static int send_ipi_many(struct ipi_data *ipi)
 		ret = riscv_send_ipi(reg);
 		if (ret) {
 			pr_err("Cannot send IPI to hart %d\n", reg);
-			return ret;
+			// return ret;
 		}
 	}
 

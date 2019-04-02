@@ -9,6 +9,8 @@
 /* CPU specific code */
 #include <common.h>
 #include <config.h>
+#include <dm.h>
+#include <environment.h>
 #include <command.h>
 #include <watchdog.h>
 #include <asm/cache.h>
@@ -50,13 +52,10 @@ static uint64_t ddr_phy_fixup(void);
 extern uint32_t DENALI_CTL_DATA[256];
 extern uint32_t DENALI_PHY_DATA[1215];
 
-int dram_init(void)
+// static void setup_fu540_clocks(void);
+
+int arch_cpu_init(void)
 {
-
-	const uint64_t ddr_end = CONFIG_SYS_SDRAM_BASE + DDR_SIZE;
-	uint32_t regdata;
-    volatile int ix;
-
 	g_aloe_prci->COREPLLCFG0 = 0x02110EC0u; /* Take PLL out of bypass */
 	while((g_aloe_prci->COREPLLCFG0 & 0x80000000u) == 0); /* Wait for lock with PLL bypassed */
 
@@ -64,6 +63,17 @@ int dram_init(void)
 	g_aloe_prci->CORECLKSEL  = 0x00000000u; /* Switch to PLL as clock source */
 
 	g_aloe_prci->DDRPLLCFG0 = 0x2110DC0u;
+
+	return(0);
+}
+
+int dram_init(void)
+{
+
+	puts("dram_init() start\n");
+	const uint64_t ddr_end = CONFIG_SYS_SDRAM_BASE + DDR_SIZE;
+	uint32_t regdata;
+	volatile int ix;
 
 	while((g_aloe_prci->DDRPLLCFG0 & 0x80000000u) == 0); /* Wait for lock with PLL bypassed */
 
@@ -131,8 +141,10 @@ int dram_init(void)
 	g_aloe_prci->GEMGXLPLLCFG1  = 0x80000000u; /* Switch to PLL as clock source */
 	g_aloe_prci->DEVICERESETREG |= 0x00000020u; /* Release MAC from reset */
 	g_aloe_prci->PROCMONCFG = 0x1 << 24u;
-	return 0;
 
+	gd->ram_size = 0x80000000;
+	puts("dram_init() end\n");
+	return 0;
 }
 
 
