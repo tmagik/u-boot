@@ -9,6 +9,8 @@
 /* CPU specific code */
 #include <common.h>
 #include <config.h>
+#include <dm.h>
+#include <environment.h>
 #include <command.h>
 #include <watchdog.h>
 #include <asm/cache.h>
@@ -140,6 +142,7 @@ int dram_init(void)
 	g_aloe_prci->DEVICERESETREG |= 0x00000020u; /* Release MAC from reset */
 	g_aloe_prci->PROCMONCFG = 0x1 << 24u;
 
+	gd->ram_size = 0x80000000;
 	puts("dram_init() end\n");
 	return 0;
 }

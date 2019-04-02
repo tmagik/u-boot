@@ -46,6 +46,7 @@ _start:
 
 	/* save hart id and dtb pointer */
 	mv	tp, a0
+	// mv	s0, a0
 	mv	s1, a1
 
 	la	t0, trap_entry
