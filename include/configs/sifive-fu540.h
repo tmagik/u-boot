@@ -18,24 +18,27 @@
 
 #define CONFIG_SYS_SDRAM_BASE		0x80000000
 
-/* run from L2 cache sideband */
+/* start from L2 cache sideband */
 #define CONFIG_SYS_TEXT_BASE		0x08000000
-#define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_TEXT_BASE + SZ_1M)
+#define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_SDRAM_BASE + SZ_1M)
 
-#define CONFIG_SYS_LOAD_ADDR		(CONFIG_SYS_TEXT_BASE + SZ_1M)
+#define CONFIG_SYS_LOAD_ADDR		(CONFIG_SYS_SDRAM_BASE + SZ_1M)
 
 #define CONFIG_SYS_MALLOC_LEN		SZ_8M
 
 #define CONFIG_SYS_BOOTM_LEN		SZ_16M
 
 /* load part way up SDram for FIT images */
-#define CONFIG_STANDALONE_LOAD_ADDR	0xa0000000
+#define CONFIG_STANDALONE_LOAD_ADDR	0x90000000
 
 /* Environment options */
 #define CONFIG_ENV_SIZE			SZ_4K
 
 #define BOOT_TARGET_DEVICES(func) \
 	func(DHCP, dhcp, na)
+
+/* Is this the right place to put this? */
+#define CONFIG_MMC_SPI 
 
 
 #if 0

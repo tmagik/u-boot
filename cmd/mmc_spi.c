@@ -73,7 +73,12 @@ static int do_mmc_spi(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		return 1;
 	}
 	printf("%s: %d at %u:%u hz %u mode %u\n", mmc->cfg->name,
-	       mmc->block_dev.devnum, bus, cs, speed, mode);
+#ifndef CONFIG_BLK
+		mmc->block_dev.devnum, 
+#else
+		mmc_get_blk_desc(mmc)->devnum,
+#endif
+		bus, cs, speed, mode);
 	mmc_init(mmc);
 	return 0;
 

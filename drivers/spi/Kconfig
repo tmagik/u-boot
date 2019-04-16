@@ -388,4 +388,13 @@ config OMAP3_SPI
 	  (McSPI). This driver be used to access SPI chips on platforms
 	  embedding this OMAP3 McSPI IP core.
 
+config SIFIVE_SPI
+	bool "SiFive SPI Driver"
+	help
+	  SPI master controller for devices using the SiFive Chisel
+	  generator SPI hardware, most commonly found in the SiFive
+	  HiFive unleashed. The Scala chisel code is in the 
+	  /src/main/scala/devices/spi directory in the repository
+	  available on https://github.com/sifive/sifive-blocks
+
 endif # menu "SPI Support"
