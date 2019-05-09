@@ -11,6 +11,8 @@ obj-$(CONFIG_STM32_SDRAM) += stm32_sdram.o
 obj-$(CONFIG_ARCH_BMIPS) += bmips_ram.o
 
 obj-$(CONFIG_ARCH_ROCKCHIP) += rockchip/
+# ugly config names
+obj-$(CONFIG_SIFIVE_DENALI) += sifive/
 
 obj-$(CONFIG_K3_AM654_DDRSS) += k3-am654-ddrss.o
 obj-$(CONFIG_ARCH_MEDIATEK) += mediatek/

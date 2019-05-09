@@ -1,14 +1,10 @@
-config RISCV_NDS
-	bool
+config SIFIVE_DENALI
+	bool "SiFive Denali DTB memory init"
 	help
-	  Run U-Boot on AndeStar V5 platforms and use some specific features
-	  which are provided by Andes Technology AndeStar V5 families.
+	  Enable the SiFive Denali memory init code
 
-if RISCV_NDS
-
-config RISCV_NDS_CACHE
-	bool "AndeStar V5 families specific cache support"
+config LEGACY_MEMORY_INIT
+	bool "SiFive FU540 legacy memory init"
 	help
-	  Provide Andes Technology AndeStar V5 families specific cache support.
+	  Legacy header file based memory init code
 
-endif
