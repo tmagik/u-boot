@@ -110,6 +110,24 @@ config SIFIVE_CLINT
 	  The SiFive CLINT block holds memory-mapped control and status registers
 	  associated with software and timer interrupts.
 
+config ANDES_PLIC
+	bool
+	depends on RISCV_MMODE
+	select REGMAP
+	select SYSCON
+	help
+	  The Andes PLIC block holds memory-mapped claim and pending registers
+	  associated with software interrupt.
+
+config ANDES_PLMT
+	bool
+	depends on RISCV_MMODE
+	select REGMAP
+	select SYSCON
+	help
+	  The Andes PLMT block holds memory-mapped mtime register
+	  associated with timer tick.
+
 config RISCV_RDTIME
 	bool
 	default y if RISCV_SMODE
@@ -144,6 +162,13 @@ config SBI_IPI
 	bool
 	default y if RISCV_SMODE
 	depends on SMP
+
+config XIP
+	bool "XIP mode"
+	help
+	  XIP (eXecute In Place) is a method for executing code directly
+	  from a NOR flash memory without copying the code to ram.
+	  Say yes here if U-Boot boots from flash directly.
 
 config STACK_SIZE_SHIFT
 	int

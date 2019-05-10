@@ -1566,7 +1566,7 @@ int fw_env_open(struct env_opts *opts)
 		free(addr0);
 
 	if (addr1)
-		free(addr0);
+		free(addr1);
 
 	return ret;
 }
@@ -1742,7 +1742,7 @@ static int parse_config(struct env_opts *opts)
 
 		if (ENVSIZE(0) != ENVSIZE(1)) {
 			fprintf(stderr,
-				"Redundant environments have unequal size");
+				"Redundant environments have unequal size\n");
 			return -1;
 		}
 	}

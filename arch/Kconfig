@@ -126,6 +126,8 @@ config SH
 
 config X86
 	bool "x86 architecture"
+	select SUPPORT_SPL
+	select SUPPORT_TPL
 	select CREATE_ARCH_SYMLINK
 	select DM
 	select DM_PCI
@@ -158,11 +160,42 @@ config X86
 	imply DM_USB
 	imply DM_VIDEO
 	imply SYSRESET
+	imply SPL_SYSRESET
 	imply SYSRESET_X86
 	imply USB_ETHER_ASIX
 	imply USB_ETHER_SMSC95XX
 	imply USB_HOST_ETHER
 	imply PCH
+	imply RTC_MC146818
+
+	# Thing to enable for when SPL/TPL are enabled: SPL
+	imply SPL_DM
+	imply SPL_OF_LIBFDT
+	imply SPL_DRIVERS_MISC_SUPPORT
+	imply SPL_GPIO_SUPPORT
+	imply SPL_LIBCOMMON_SUPPORT
+	imply SPL_LIBGENERIC_SUPPORT
+	imply SPL_SERIAL_SUPPORT
+	imply SPL_SPI_FLASH_SUPPORT
+	imply SPL_SPI_SUPPORT
+	imply SPL_OF_CONTROL
+	imply SPL_TIMER
+	imply SPL_REGMAP
+	imply SPL_SYSCON
+	# TPL
+	imply TPL_DM
+	imply TPL_OF_LIBFDT
+	imply TPL_DRIVERS_MISC_SUPPORT
+	imply TPL_GPIO_SUPPORT
+	imply TPL_LIBCOMMON_SUPPORT
+	imply TPL_LIBGENERIC_SUPPORT
+	imply TPL_SERIAL_SUPPORT
+	imply TPL_SPI_FLASH_SUPPORT
+	imply TPL_SPI_SUPPORT
+	imply TPL_OF_CONTROL
+	imply TPL_TIMER
+	imply TPL_REGMAP
+	imply TPL_SYSCON
 
 config XTENSA
 	bool "Xtensa architecture"
@@ -226,6 +259,15 @@ config SYS_CONFIG_NAME
 	  This option should contain the base name of board header file.
 	  The header file include/configs/<CONFIG_SYS_CONFIG_NAME>.h
 	  should be included from include/config.h.
+
+config SYS_DISABLE_DCACHE_OPS
+	bool
+	help
+	 This option disables dcache flush and dcache invalidation
+	 operations. For example, on coherent systems where cache
+	 operatios are not required, enable this option to avoid them.
+	 Note that, its up to the individual architectures to implement
+	 this functionality.
 
 source "arch/arc/Kconfig"
 source "arch/arm/Kconfig"

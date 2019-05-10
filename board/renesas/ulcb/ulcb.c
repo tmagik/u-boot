@@ -68,17 +68,37 @@ int board_init(void)
 	return 0;
 }
 
+/*
+ * If the firmware passed a device tree use it for U-Boot DRAM setup.
+ */
+extern u64 rcar_atf_boot_args[];
+
 int dram_init(void)
 {
-	if (fdtdec_setup_mem_size_base() != 0)
-		return -EINVAL;
+	const void *atf_fdt_blob = (const void *)(rcar_atf_boot_args[1]);
+	const void *blob;
 
-	return 0;
+	/* Check if ATF passed us DTB. If not, fall back to builtin DTB. */
+	if (fdt_magic(atf_fdt_blob) == FDT_MAGIC)
+		blob = atf_fdt_blob;
+	else
+		blob = gd->fdt_blob;
+
+	return fdtdec_setup_mem_size_base_fdt(blob);
 }
 
 int dram_init_banksize(void)
 {
-	fdtdec_setup_memory_banksize();
+	const void *atf_fdt_blob = (const void *)(rcar_atf_boot_args[1]);
+	const void *blob;
+
+	/* Check if ATF passed us DTB. If not, fall back to builtin DTB. */
+	if (fdt_magic(atf_fdt_blob) == FDT_MAGIC)
+		blob = atf_fdt_blob;
+	else
+		blob = gd->fdt_blob;
+
+	fdtdec_setup_memory_banksize_fdt(blob);
 
 	return 0;
 }
@@ -95,6 +115,10 @@ int board_fit_config_name_match(const char *name)
 
 	if ((cpu_type == RMOBILE_CPU_TYPE_R8A7796) &&
 	    !strcmp(name, "r8a7796-m3ulcb-u-boot"))
+		return 0;
+
+	if ((cpu_type == RMOBILE_CPU_TYPE_R8A77965) &&
+	    !strcmp(name, "r8a77965-m3nulcb-u-boot"))
 		return 0;
 
 	return -1;

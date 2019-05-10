@@ -33,6 +33,9 @@
 		i2c2 = &i2c3;
 		mmc0 = &esdhc1;
 		mmc1 = &esdhc2;
+		mmc2 = &esdhc3;
+		mmc3 = &esdhc4;
+		usb1 = &usbh1;
 	};
 
 	tzic: tz-interrupt-controller@fffc000 {
@@ -86,6 +89,30 @@
 					bus-width = <4>;
 					status = "disabled";
 				};
+
+				esdhc3: esdhc@50020000 {
+					compatible = "fsl,imx53-esdhc";
+					reg = <0x50020000 0x4000>;
+					interrupts = <3>;
+					clocks = <&clks IMX5_CLK_ESDHC3_IPG_GATE>,
+						 <&clks IMX5_CLK_DUMMY>,
+						 <&clks IMX5_CLK_ESDHC3_PER_GATE>;
+					clock-names = "ipg", "ahb", "per";
+					bus-width = <4>;
+					status = "disabled";
+				};
+
+				esdhc4: esdhc@50024000 {
+					compatible = "fsl,imx53-esdhc";
+					reg = <0x50024000 0x4000>;
+					interrupts = <4>;
+					clocks = <&clks IMX5_CLK_ESDHC4_IPG_GATE>,
+						 <&clks IMX5_CLK_DUMMY>,
+						 <&clks IMX5_CLK_ESDHC4_PER_GATE>;
+					clock-names = "ipg", "ahb", "per";
+					bus-width = <4>;
+					status = "disabled";
+				};
 			};
 
 			iomuxc: iomuxc@53fa8000 {
@@ -107,6 +134,15 @@
 				clock-names = "ipg", "per";
 				dmas = <&sdma 12 4 0>, <&sdma 13 4 0>;
 				dma-names = "rx", "tx";
+				status = "disabled";
+			};
+
+			usbh1: usb@53f80200 {
+				compatible = "fsl,imx53-usb", "fsl,imx27-usb";
+				reg = <0x53f80200 0x0200>;
+				interrupts = <14>;
+				clocks = <&clks IMX5_CLK_USBOH3_GATE>;
+				dr_mode = "host";
 				status = "disabled";
 			};
 

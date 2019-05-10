@@ -59,20 +59,10 @@ void enable_caches(void)
 #ifdef CONFIG_SYS_L2_PL310
 void v7_outer_cache_enable(void)
 {
-	/* Disable the L2 cache */
-	clrbits_le32(&pl310->pl310_ctrl, L2X0_CTRL_EN);
+	struct udevice *dev;
 
-	writel(0x0, &pl310->pl310_tag_latency_ctrl);
-	writel(0x10, &pl310->pl310_data_latency_ctrl);
-
-	/* enable BRESP, instruction and data prefetch, full line of zeroes */
-	setbits_le32(&pl310->pl310_aux_ctrl,
-		     L310_AUX_CTRL_DATA_PREFETCH_MASK |
-		     L310_AUX_CTRL_INST_PREFETCH_MASK |
-		     L310_SHARED_ATT_OVERRIDE_ENABLE);
-
-	/* Enable the L2 cache */
-	setbits_le32(&pl310->pl310_ctrl, L2X0_CTRL_EN);
+	if (uclass_get_device(UCLASS_CACHE, 0, &dev))
+		pr_err("cache controller driver NOT found!\n");
 }
 
 void v7_outer_cache_disable(void)
@@ -126,17 +116,22 @@ int arch_cpu_init(void)
 #ifndef CONFIG_SPL_BUILD
 static int do_bridge(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
-	if (argc != 2)
+	unsigned int mask = ~0;
+
+	if (argc < 2 || argc > 3)
 		return CMD_RET_USAGE;
 
 	argv++;
 
+	if (argc == 3)
+		mask = simple_strtoul(argv[1], NULL, 16);
+
 	switch (*argv[0]) {
 	case 'e':	/* Enable */
-		do_bridge_reset(1);
+		do_bridge_reset(1, mask);
 		break;
 	case 'd':	/* Disable */
-		do_bridge_reset(0);
+		do_bridge_reset(0, mask);
 		break;
 	default:
 		return CMD_RET_USAGE;
@@ -145,10 +140,10 @@ static int do_bridge(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 	return 0;
 }
 
-U_BOOT_CMD(bridge, 2, 1, do_bridge,
+U_BOOT_CMD(bridge, 3, 1, do_bridge,
 	   "SoCFPGA HPS FPGA bridge control",
-	   "enable  - Enable HPS-to-FPGA, FPGA-to-HPS, LWHPS-to-FPGA bridges\n"
-	   "bridge disable - Enable HPS-to-FPGA, FPGA-to-HPS, LWHPS-to-FPGA bridges\n"
+	   "enable [mask] - Enable HPS-to-FPGA, FPGA-to-HPS, LWHPS-to-FPGA bridges\n"
+	   "bridge disable [mask] - Enable HPS-to-FPGA, FPGA-to-HPS, LWHPS-to-FPGA bridges\n"
 	   ""
 );
 

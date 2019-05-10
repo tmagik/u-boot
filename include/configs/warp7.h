@@ -24,14 +24,11 @@
 #endif
 #endif
 
-#define CONFIG_MXC_UART_BASE		UART1_IPS_BASE_ADDR
-
 /* Size of malloc() pool */
 #define CONFIG_SYS_MALLOC_LEN		(35 * SZ_1M)
 
 /* MMC Config*/
 #define CONFIG_SYS_FSL_ESDHC_ADDR       USDHC3_BASE_ADDR
-#define CONFIG_SUPPORT_EMMC_BOOT
 #define CONFIG_SYS_FSL_ESDHC_HAS_DDR_MODE
 #define CONFIG_SYS_MMC_IMG_LOAD_PART	1
 
@@ -39,7 +36,7 @@
 #define CONFIG_SERIAL_TAG
 
 #define CONFIG_DFU_ENV_SETTINGS \
-	"dfu_alt_info=boot raw 0x2 0x400 mmcpart 1\0" \
+	"dfu_alt_info=boot raw 0x2 0x1000 mmcpart 1\0" \
 
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	CONFIG_DFU_ENV_SETTINGS \

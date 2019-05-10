@@ -46,7 +46,7 @@
 #define CONFIG_DFU_ENV_SETTINGS \
 	"dfu_alt_info=" \
 		"spl raw 0x2 0x400;" \
-		"u-boot raw 0x8a 0x400;" \
+		"u-boot raw 0x8a 0x1000;" \
 		"/boot/zImage ext4 0 1;" \
 		"/boot/imx7d-pico-hobbit.dtb ext4 0 1;" \
 		"/boot/imx7d-pico-pi.dtb ext4 0 1;" \
@@ -58,7 +58,6 @@
 	"bootmenu_1=Boot using PICO-Pi baseboard=" \
 		"setenv fdtfile imx7d-pico-pi.dtb\0" \
 
-#define CONFIG_SUPPORT_EMMC_BOOT /* eMMC specific */
 #define CONFIG_SYS_MMC_IMG_LOAD_PART	1
 
 #define CONFIG_EXTRA_ENV_SETTINGS \

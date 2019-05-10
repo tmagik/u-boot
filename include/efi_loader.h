@@ -25,6 +25,9 @@
 	EFI_GUID(0xe61d73b9, 0xa384, 0x4acc, \
 		 0xae, 0xab, 0x82, 0xe8, 0x28, 0xf3, 0x62, 0x8b)
 
+/* Root node */
+extern efi_handle_t efi_root;
+
 int __efi_entry_check(void);
 int __efi_exit_check(void);
 const char *__efi_nesting(void);
@@ -135,6 +138,7 @@ extern const efi_guid_t efi_guid_event_group_reset_system;
 /* GUID of the device tree table */
 extern const efi_guid_t efi_guid_fdt;
 extern const efi_guid_t efi_guid_loaded_image;
+extern const efi_guid_t efi_guid_loaded_image_device_path;
 extern const efi_guid_t efi_guid_device_path_to_text_protocol;
 extern const efi_guid_t efi_simple_file_system_protocol_guid;
 extern const efi_guid_t efi_file_info_guid;
@@ -176,6 +180,19 @@ struct efi_handler {
 };
 
 /**
+ * enum efi_object_type - type of EFI object
+ *
+ * In UnloadImage we must be able to identify if the handle relates to a
+ * started image.
+ */
+enum efi_object_type {
+	EFI_OBJECT_TYPE_UNDEFINED = 0,
+	EFI_OBJECT_TYPE_U_BOOT_FIRMWARE,
+	EFI_OBJECT_TYPE_LOADED_IMAGE,
+	EFI_OBJECT_TYPE_STARTED_IMAGE,
+};
+
+/**
  * struct efi_object - dereferenced EFI handle
  *
  * @link:	pointers to put the handle into a linked list
@@ -197,25 +214,28 @@ struct efi_object {
 	struct list_head link;
 	/* The list of protocols */
 	struct list_head protocols;
+	enum efi_object_type type;
 };
 
 /**
  * struct efi_loaded_image_obj - handle of a loaded image
  *
  * @header:		EFI object header
- * @reloc_base:		base address for the relocated image
- * @reloc_size:		size of the relocated image
+ * @exit_status:	exit status passed to Exit()
+ * @exit_data_size:	exit data size passed to Exit()
+ * @exit_data:		exit data passed to Exit()
  * @exit_jmp:		long jump buffer for returning form started image
  * @entry:		entry address of the relocated image
  */
 struct efi_loaded_image_obj {
 	struct efi_object header;
-	void *reloc_base;
-	aligned_u64 reloc_size;
 	efi_status_t exit_status;
+	efi_uintn_t *exit_data_size;
+	u16 **exit_data;
 	struct jmp_buf_data exit_jmp;
 	EFIAPI efi_status_t (*entry)(efi_handle_t image_handle,
 				     struct efi_system_table *st);
+	u16 image_type;
 };
 
 /**
@@ -251,6 +271,25 @@ struct efi_event {
 extern struct list_head efi_obj_list;
 /* List of all events */
 extern struct list_head efi_events;
+
+/**
+ * efi_register_notify_event - event registered by RegisterProtocolNotify()
+ *
+ * The address of this structure serves as registration value.
+ *
+ * @link:		link to list of all registered events
+ * @event:		registered event. The same event may registered for
+ *			multiple GUIDs.
+ * @protocol:		protocol for which the event is registered
+ */
+struct efi_register_notify_event {
+	struct list_head link;
+	struct efi_event *event;
+	efi_guid_t protocol;
+};
+
+/* List of all events registered by RegisterProtocolNotify() */
+extern struct list_head efi_register_notify_events;
 
 /* Initialize efi execution environment */
 efi_status_t efi_init_obj_list(void);
@@ -320,10 +359,19 @@ efi_status_t efi_create_handle(efi_handle_t *handle);
 void efi_delete_handle(efi_handle_t obj);
 /* Call this to validate a handle and find the EFI object for it */
 struct efi_object *efi_search_obj(const efi_handle_t handle);
+/* Load image */
+efi_status_t EFIAPI efi_load_image(bool boot_policy,
+				   efi_handle_t parent_image,
+				   struct efi_device_path *file_path,
+				   void *source_buffer,
+				   efi_uintn_t source_size,
+				   efi_handle_t *image_handle);
 /* Start image */
 efi_status_t EFIAPI efi_start_image(efi_handle_t image_handle,
 				    efi_uintn_t *exit_data_size,
 				    u16 **exit_data);
+/* Unload image */
+efi_status_t EFIAPI efi_unload_image(efi_handle_t image_handle);
 /* Find a protocol on a handle */
 efi_status_t efi_search_protocol(const efi_handle_t handle,
 				 const efi_guid_t *protocol_guid,
@@ -338,6 +386,9 @@ efi_status_t efi_remove_protocol(const efi_handle_t handle,
 				 void *protocol_interface);
 /* Delete all protocols from a handle */
 efi_status_t efi_remove_all_protocols(const efi_handle_t handle);
+/* Install multiple protocol interfaces */
+efi_status_t EFIAPI efi_install_multiple_protocol_interfaces
+				(efi_handle_t *handle, ...);
 /* Call this to create an event */
 efi_status_t efi_create_event(uint32_t type, efi_uintn_t notify_tpl,
 			      void (EFIAPI *notify_function) (
@@ -400,8 +451,6 @@ efi_status_t efi_setup_loaded_image(struct efi_device_path *device_path,
 				    struct efi_device_path *file_path,
 				    struct efi_loaded_image_obj **handle_ptr,
 				    struct efi_loaded_image **info_ptr);
-efi_status_t efi_load_image_from_path(struct efi_device_path *file_path,
-				      void **buffer, efi_uintn_t *size);
 /* Print information about all loaded images */
 void efi_print_image_infos(void *pc);
 
@@ -550,13 +599,12 @@ struct efi_load_option {
 	u16 file_path_length;
 	u16 *label;
 	struct efi_device_path *file_path;
-	u8 *optional_data;
+	const u8 *optional_data;
 };
 
 void efi_deserialize_load_option(struct efi_load_option *lo, u8 *data);
 unsigned long efi_serialize_load_option(struct efi_load_option *lo, u8 **data);
-void *efi_bootmgr_load(struct efi_device_path **device_path,
-		       struct efi_device_path **file_path);
+efi_status_t efi_bootmgr_load(efi_handle_t *handle);
 
 #else /* CONFIG_IS_ENABLED(EFI_LOADER) */
 

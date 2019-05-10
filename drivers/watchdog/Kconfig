@@ -51,10 +51,11 @@ config ULP_WATCHDOG
 config WDT
 	bool "Enable driver model for watchdog timer drivers"
 	depends on DM
+	imply WATCHDOG
 	help
 	  Enable driver model for watchdog timer. At the moment the API
 	  is very simple and only supports four operations:
-	  start, restart, stop and reset (expire immediately).
+	  start, stop, reset and expire_now (expire immediately).
 	  What exactly happens when the timer expires is up to a particular
 	  device/driver.
 
@@ -97,6 +98,7 @@ config WDT_BCM6345
 config WDT_ORION
 	bool "Orion watchdog timer support"
 	depends on WDT
+	select CLK
 	help
 	   Select this to enable Orion watchdog timer, which can be found on some
 	   Marvell Armada chips.
@@ -139,13 +141,9 @@ config WDT_AT91
 	   Select this to enable Microchip watchdog timer, which can be found on
 	   some AT91 devices.
 
-config AT91_HW_WDT_TIMEOUT
-	bool "AT91 watchdog timeout specified"
-	depends on WDT_AT91
-
 config WDT_MT7621
 	bool "MediaTek MT7621 watchdog timer support"
-	depends on WDT && ARCH_MT7620
+	depends on WDT && SOC_MT7628
 	help
 	   Select this to enable Ralink / Mediatek watchdog timer,
 	   which can be found on some MediaTek chips.
@@ -153,7 +151,6 @@ config WDT_MT7621
 config WDT_MPC8xx
 	bool "MPC8xx watchdog timer support"
 	depends on WDT && MPC8xx
-	select CONFIG_MPC8xx_WATCHDOG
 	help
 	   Select this to enable mpc8xx watchdog timer
 
