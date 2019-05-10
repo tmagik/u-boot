@@ -17,7 +17,7 @@
 #include <regmap.h>
 #include <syscon.h>
 #include <asm/io.h>
-#include <asm/arch/clock.h>
+#include <asm/arch/clk.h>
 #include <asm/arch/sdram_common.h>
 #include <asm/arch/sdram_sifive.h>
 #include <asm/arch/hardware.h>
