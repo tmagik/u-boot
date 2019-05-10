@@ -142,7 +142,8 @@ int dram_init(void)
 	g_aloe_prci->DEVICERESETREG |= 0x00000020u; /* Release MAC from reset */
 	g_aloe_prci->PROCMONCFG = 0x1 << 24u;
 
-	gd->ram_size = 0x80000000;
+	#warning "get this from device tree!! "
+	gd->ram_size = 0x200000000;
 	puts("dram_init() end\n");
 	return 0;
 }
