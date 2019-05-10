@@ -728,7 +728,8 @@ CONFIG_NETDEVICES=y
 # CONFIG_ETHOC is not set
 # CONFIG_FTMAC100 is not set
 # CONFIG_FTGMAC100 is not set
-# CONFIG_MACB is not set
+CONFIG_MACB=y
+# CONFIG_MACB_ZYNQ is not set
 # CONFIG_RGMII is not set
 CONFIG_MII=y
 # CONFIG_RTL8139 is not set
