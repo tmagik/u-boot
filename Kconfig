@@ -278,7 +278,7 @@ config FIT
 if FIT
 
 config FIT_EXTERNAL_OFFSET
-	hex "Text Base"
+	hex "FIT external data offset"
 	default 0x0
 	help
 	  This specifies a data offset in fit image.
@@ -512,7 +512,7 @@ config SYS_TEXT_BASE
 
 
 config SYS_CLK_FREQ
-	depends on ARC || ARCH_SUNXI
+	depends on ARC || ARCH_SUNXI || MPC83xx
 	int "CPU clock frequency"
 	help
 	  TODO: Move CONFIG_SYS_CLK_FREQ for all the architecture

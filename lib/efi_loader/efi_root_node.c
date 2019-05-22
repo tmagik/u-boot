@@ -52,15 +52,24 @@ efi_status_t efi_root_node_register(void)
 			(&efi_root,
 			 /* Device path protocol */
 			 &efi_guid_device_path, dp,
+#if CONFIG_IS_ENABLED(EFI_DEVICE_PATH_TO_TEXT)
 			 /* Device path to text protocol */
 			 &efi_guid_device_path_to_text_protocol,
 			 (void *)&efi_device_path_to_text,
+#endif
 			 /* Device path utilities protocol */
 			 &efi_guid_device_path_utilities_protocol,
 			 (void *)&efi_device_path_utilities,
-			 /* Unicode collation protocol */
+#if CONFIG_IS_ENABLED(EFI_UNICODE_COLLATION_PROTOCOL2)
+#if CONFIG_IS_ENABLED(EFI_UNICODE_COLLATION_PROTOCOL)
+			 /* Deprecated Unicode collation protocol */
 			 &efi_guid_unicode_collation_protocol,
 			 (void *)&efi_unicode_collation_protocol,
+#endif
+			 /* Current Unicode collation protocol */
+			 &efi_guid_unicode_collation_protocol2,
+			 (void *)&efi_unicode_collation_protocol2,
+#endif
 #if CONFIG_IS_ENABLED(EFI_LOADER_HII)
 			 /* HII string protocol */
 			 &efi_guid_hii_string_protocol,
