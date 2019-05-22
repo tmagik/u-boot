@@ -70,9 +70,13 @@
                         "fdt set /firmware sifive,uboot " __stringify(PLAIN_VERSION) ";" \
                         "fdt set /chosen bootargs console=ttySIF0,${baudrate}\0" \
                 "fatenv=setenv fileaddr a0000000; fatload mmc 0:1 ${fileaddr} uEnv.txt;" \
-                        "env import -t ${fileaddr} ${filesize}"
+                        "env import -t ${fileaddr} ${filesize};\0" \
+		"distro_bootcmd=dhcp"
 
 #endif
+
+/* macb needs the phy reset until we have gpio drivers */
+#define CONFIG_RESET_PHY_R
 
 /* 1MHz RTC clock, SiFive FU540-C000 Manual, section 7 */
 #define CONFIG_SYS_HZ_CLOCK     1000000
