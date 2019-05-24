@@ -3,12 +3,11 @@
 / {
 	#address-cells = <2>;
 	#size-cells = <2>;
-	compatible = "sifive,fu540g", "sifive,fu500";
-	model = "sifive,hifive-unleashed-a00";
+	compatible = "sifive,fu540-c000", "sifive,fu540";
 
 	aliases {
-		serial0 = &L28;
-		serial1 = &L29;
+		serial0 = &uart0;
+		serial1 = &uart1;
 	};
 
         chosen {
@@ -23,13 +22,12 @@
 		sifive,uboot = "YYYY-MM-DD";
 	};
 
-	L3: cpus {
+	cpus {
 		#address-cells = <1>;
 		#size-cells = <0>;
 		timebase-frequency = <1000000>;
-		L9: cpu@0 {
-			clock-frequency = <0>;
-			compatible = "sifive,rocket0", "riscv";
+		cpu0: cpu@0 {
+			compatible = "sifive,e51", "sifive,rocket0", "riscv";
 			device_type = "cpu";
 			i-cache-block-size = <64>;
 			i-cache-sets = <128>;
@@ -40,15 +38,14 @@
 			sifive,dtim = <&L8>;
 			sifive,itim = <&L7>;
 			status = "okay";
-			L10: interrupt-controller {
+			cpu0_intc: interrupt-controller {
 				#interrupt-cells = <1>;
 				compatible = "riscv,cpu-intc";
 				interrupt-controller;
 			};
 		};
-		L12: cpu@1 {
-			clock-frequency = <0>;
-			compatible = "sifive,rocket0", "riscv";
+		cpu1: cpu@1 {
+			compatible = "sifive,u54-mc", "sifive,rocket0", "riscv";
 			d-cache-block-size = <64>;
 			d-cache-sets = <64>;
 			d-cache-size = <32768>;
@@ -67,15 +64,15 @@
 			sifive,itim = <&L11>;
 			status = "okay";
 			tlb-split;
-			L13: interrupt-controller {
+			cpu1_intc: interrupt-controller {
 				#interrupt-cells = <1>;
 				compatible = "riscv,cpu-intc";
 				interrupt-controller;
 			};
 		};
-		L15: cpu@2 {
+		cpu2: cpu@2 {
 			clock-frequency = <0>;
-			compatible = "sifive,rocket0", "riscv";
+			compatible = "sifive,u54-mc", "sifive,rocket0", "riscv";
 			d-cache-block-size = <64>;
 			d-cache-sets = <64>;
 			d-cache-size = <32768>;
@@ -94,15 +91,15 @@
 			sifive,itim = <&L14>;
 			status = "okay";
 			tlb-split;
-			L16: interrupt-controller {
+			cpu2_intc: interrupt-controller {
 				#interrupt-cells = <1>;
 				compatible = "riscv,cpu-intc";
 				interrupt-controller;
 			};
 		};
-		L18: cpu@3 {
+		cpu3: cpu@3 {
 			clock-frequency = <0>;
-			compatible = "sifive,rocket0", "riscv";
+			compatible = "sifive,u54-mc", "sifive,rocket0", "riscv";
 			d-cache-block-size = <64>;
 			d-cache-sets = <64>;
 			d-cache-size = <32768>;
@@ -121,15 +118,15 @@
 			sifive,itim = <&L17>;
 			status = "okay";
 			tlb-split;
-			L19: interrupt-controller {
+			cpu3_intc: interrupt-controller {
 				#interrupt-cells = <1>;
 				compatible = "riscv,cpu-intc";
 				interrupt-controller;
 			};
 		};
-		L21: cpu@4 {
+		cpu4: cpu@4 {
 			clock-frequency = <0>;
-			compatible = "sifive,rocket0", "riscv";
+			compatible = "sifive,u54-mc", "sifive,rocket0", "riscv";
 			d-cache-block-size = <64>;
 			d-cache-sets = <64>;
 			d-cache-size = <32768>;
@@ -148,7 +145,7 @@
 			sifive,itim = <&L20>;
 			status = "okay";
 			tlb-split;
-			L22: interrupt-controller {
+			cpu4_intc: interrupt-controller {
 				#interrupt-cells = <1>;
 				compatible = "riscv,cpu-intc";
 				interrupt-controller;
@@ -162,7 +159,7 @@
 	L2: soc {
 		#address-cells = <2>;
 		#size-cells = <2>;
-		compatible = "SiFive,FU540G-soc", "fu500-soc", "sifive-soc", "simple-bus";
+		compatible = "sifive,fu540-c000", "sifive,fu540", "simple-bus";
 		ranges;
 		refclk: refclk {
 			#clock-cells = <0>;
@@ -227,13 +224,13 @@
 		};
 		L5: clint@2000000 {
 			compatible = "riscv,clint0";
-			interrupts-extended = <&L10 3 &L10 7 &L13 3 &L13 7 &L16 3 &L16 7 &L19 3 &L19 7 &L22 3 &L22 7>;
+			interrupts-extended = <&cpu0_intc 3 &cpu0_intc 7 &cpu1_intc 3 &cpu1_intc 7 &cpu2_intc 3 &cpu2_intc 7 &cpu3_intc 3 &cpu3_intc 7 &cpu4_intc 3 &cpu4_intc 7>;
 			reg = <0x0 0x2000000 0x0 0x10000>;
 			reg-names = "control";
 		};
 		L6: debug-controller@0 {
 			compatible = "sifive,debug-013", "riscv,debug-013";
-			interrupts-extended = <&L10 65535 &L13 65535 &L16 65535 &L19 65535 &L22 65535>;
+			interrupts-extended = <&cpu0_intc 65535 &cpu1_intc 65535 &cpu2_intc 65535 &cpu3_intc 65535 &cpu4_intc 65535>;
 			reg = <0x0 0x0 0x0 0x1000>;
 			reg-names = "control";
 		};
@@ -356,7 +353,7 @@
 			#interrupt-cells = <1>;
 			compatible = "riscv,plic0";
 			interrupt-controller;
-			interrupts-extended = <&L10 11 &L13 11 &L13 9 &L16 11 &L16 9 &L19 11 &L19 9 &L22 11 &L22 9>;
+			interrupts-extended = <&cpu0_intc 11 &cpu1_intc 11 &cpu1_intc 9 &cpu2_intc 11 &cpu2_intc 9 &cpu3_intc 11 &cpu3_intc 9 &cpu4_intc 11 &cpu4_intc 9>;
 			reg = <0x0 0xc000000 0x0 0x4000000>;
 			reg-names = "control";
 			riscv,max-priority = <7>;
@@ -499,7 +496,7 @@
 			reg = <0x0 0xa000000 0x0 0x2000000>;
 			reg-names = "mem";
 		};
-		L28: serial@10010000 {
+		uart0: serial@10010000 {
 			compatible = "sifive,uart0";
 			interrupt-parent = <&L4>;
 			interrupts = <4>;
@@ -507,7 +504,7 @@
 			reg-names = "control";
 			clocks = <&tlclk>;
 		};
-		L29: serial@10011000 {
+		uart1: serial@10011000 {
 			compatible = "sifive,uart0";
 			interrupt-parent = <&L4>;
 			interrupts = <5>;
