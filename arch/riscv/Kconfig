@@ -48,7 +48,7 @@ config SPL_SYS_DCACHE_OFF
 # board-specific options below
 source "board/AndesTech/ax25-ae350/Kconfig"
 source "board/emulation/qemu-riscv/Kconfig"
-source "board/sifive/fu540/Kconfig"
+source "board/sifive/hifive-unleashed-a00/Kconfig"
 
 # platform-specific options below
 source "arch/riscv/cpu/ax25/Kconfig"
