@@ -353,7 +353,7 @@ static int _macb_send(struct macb_device *macb, const char *name, void *packet,
 		if (ctrl & TXBUF_EXHAUSTED)
 			printf("%s: TX buffers exhausted in mid frame\n", name);
 	} else {
-		printf("%s: TX timeout\n", name);
+		printf("%s: TX timeout paddr %p tx_head %x\n", name, paddr, tx_head);
 	}
 
 	/* No one cares anyway */
@@ -503,8 +503,10 @@ int __weak macb_linkspd_cb(struct udevice *dev, unsigned int speed)
 	int ret;
 
 	ret = clk_get_by_name(dev, "tx_clk", &tx_clk);
-	if (ret)
+	if (ret){
+		printf("macb_linkspeed_cb: could not find tx_clk in device tree\n");	
 		return 0;
+	}
 
 	switch (speed) {
 	case _10BASET:
@@ -519,8 +521,11 @@ int __weak macb_linkspd_cb(struct udevice *dev, unsigned int speed)
 		break;
 	}
 
-	if (tx_clk.dev)
+	if (tx_clk.dev){
 		clk_set_rate(&tx_clk, rate);
+	} else {
+		printf("macb_linkspeed_cb: error, no tx_clk.dev!!\n");
+	}
 #endif
 
 	return 0;

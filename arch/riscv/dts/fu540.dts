@@ -180,14 +180,7 @@
 			clocks = <&refclk>, <&rtcclk>;
 			#clock-cells = <1>;
 		};
-		tlclk: tlclk {
-			compatible = "fixed-factor-clock";
-			clocks = <&prci 0>;
-			#clock-cells = <0>;
-			clock-div = <2>;
-			clock-mult = <1>;
-		};
-		L51: cadence-gemgxl-mgmt@100a0000 {
+		gemgxl: cadence-gemgxl-mgmt@100a0000 {
 			compatible = "sifive,cadencegemgxlmgmt0";
 			reg = <0x0 0x100a0000 0x0 0x1000>;
 			reg-names = "control";
@@ -270,7 +263,7 @@
 			local-mac-address = [00 00 00 00 00 00];
 			phy-mode = "gmii";
 			clock-names = "pclk", "hclk", "tx_clk";
-			clocks = <&prci 1>, <&prci 1>, <&L51>;
+			clocks = <&prci 1>, <&prci 1>, <&gemgxl>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			phy1: ethernet-phy@0 {
@@ -297,7 +290,7 @@
 			compatible = "sifive,i2c0", "opencores,i2c-ocores";
 			reg = <0x0 0x10030000 0x0 0x1000>;
 			reg-names = "control";
-			clocks = <&tlclk>;
+			clocks = <&prci 3>;
 
 			reg-shift = <2>;
 			reg-io-width = <1>;
@@ -425,7 +418,7 @@
 			interrupts = <42 43 44 45>;
 			reg = <0x0 0x10020000 0x0 0x1000>;
 			reg-names = "control";
-			clocks = <&tlclk>;
+			clocks = <&prci 3>;
 			sifive,approx-period = <1000000>;
 			#pwm-cells = <2>;
 		};
@@ -435,7 +428,7 @@
 			interrupts = <46 47 48 49>;
 			reg = <0x0 0x10021000 0x0 0x1000>;
 			reg-names = "control";
-			clocks = <&tlclk>;
+			clocks = <&prci 3>;
 			sifive,approx-period = <1000000>;
 			#pwm-cells = <2>;
 		};
@@ -502,7 +495,7 @@
 			interrupts = <4>;
 			reg = <0x0 0x10010000 0x0 0x1000>;
 			reg-names = "control";
-			clocks = <&tlclk>;
+			clocks = <&prci 3>;
 		};
 		uart1: serial@10011000 {
 			compatible = "sifive,uart0";
@@ -510,7 +503,7 @@
 			interrupts = <5>;
 			reg = <0x0 0x10011000 0x0 0x1000>;
 			reg-names = "control";
-			clocks = <&tlclk>;
+			clocks = <&prci 3>;
 		};
 		L49: spi@10040000 {
 			compatible = "sifive,spi0";
@@ -518,7 +511,7 @@
 			interrupts = <51>;
 			reg = <0x0 0x10040000 0x0 0x1000 0x0 0x20000000 0x0 0x10000000>;
 			reg-names = "control", "mem";
-			clocks = <&tlclk>;
+			clocks = <&prci 3>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			flash@0 {
@@ -536,7 +529,7 @@
 			interrupts = <52>;
 			reg = <0x0 0x10041000 0x0 0x1000 0x0 0x30000000 0x0 0x10000000>;
 			reg-names = "control", "mem";
-			clocks = <&tlclk>;
+			clocks = <&prci 3>;
 
 			#address-cells = <1>;
 			#size-cells = <0>;
@@ -547,7 +540,7 @@
 			interrupts = <6>;
 			reg = <0x0 0x10050000 0x0 0x1000>;
 			reg-names = "control";
-			clocks = <&tlclk>;
+			clocks = <&prci 3>;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			mmc@0 {
@@ -564,7 +557,7 @@
 			interrupt-parent = <&L4>;
 			interrupts = <33>;
 			reg = <0x27 0x00000000 0 0x1000>;
-			clocks = <&tlclk>;
+			clocks = <&prci 3>;
 			/* clock-frequency = <14000000>; */
 			spi-max-frequency = <25000000>;
 			#address-cells = <1>;
@@ -587,7 +580,7 @@
 			interrupt-parent = <&L4>;
 			interrupts = <34>;
 			reg = <0x27 0x00001000 0 0x1000>;
-			clocks = <&tlclk>;
+			clocks = <&prci 3>;
 			/* clock-frequency = <14000000>; */
 			spi-max-frequency = <25000000>;
 			#address-cells = <1>;

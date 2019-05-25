@@ -18,8 +18,8 @@
 
 #define CONFIG_SYS_SDRAM_BASE		0x80000000
 
-/* start from L2 cache sideband */
-#define CONFIG_SYS_TEXT_BASE		0x08000000
+///* start from L2 cache sideband */
+//#define CONFIG_SYS_TEXT_BASE		0x08000000
 #define CONFIG_SYS_INIT_SP_ADDR		(CONFIG_SYS_SDRAM_BASE + SZ_1M)
 
 #define CONFIG_SYS_LOAD_ADDR		(CONFIG_SYS_SDRAM_BASE + SZ_1M)
