@@ -105,11 +105,6 @@
 
 #define CONFIG_CHIP_SELECTS_PER_CTRL	4
 
-#if !defined(CONFIG_SD_BOOT) && !defined(CONFIG_NAND_BOOT) && \
-	!defined(CONFIG_QSPI_BOOT)
-#define CONFIG_SYS_QE_FMAN_FW_IN_NOR
-#endif
-
 /*
  * IFC Definitions
  */
@@ -363,7 +358,8 @@
 			"${scriptaddr} ${prefix}${script}; "    \
 		"env exists secureboot && load ${devtype} "     \
 			"${devnum}:${distro_bootpart} "		\
-			"${scripthdraddr} ${prefix}${boot_script_hdr} " \
+			"${scripthdraddr} ${prefix}${boot_script_hdr}; " \
+			"env exists secureboot "	\
 			"&& esbc_validate ${scripthdraddr};"    \
 		"source ${scriptaddr}\0"	  \
 	"installer=load mmc 0:2 $load_addr "	\

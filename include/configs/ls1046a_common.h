@@ -174,16 +174,12 @@
  * about 1MB (2048 blocks), Env is stored after the image, and the env size is
  * 0x2000 (16 blocks), 8 + 2048 + 16 = 2072, enlarge it to 18432(0x4800).
  */
-#define CONFIG_SYS_QE_FMAN_FW_IN_MMC
 #define CONFIG_SYS_FMAN_FW_ADDR		(512 * 0x4800)
 #elif defined(CONFIG_QSPI_BOOT)
-#define CONFIG_SYS_QE_FW_IN_SPIFLASH
 #define CONFIG_SYS_FMAN_FW_ADDR		0x40900000
 #elif defined(CONFIG_NAND_BOOT)
-#define CONFIG_SYS_QE_FMAN_FW_IN_NAND
 #define CONFIG_SYS_FMAN_FW_ADDR		(36 * CONFIG_SYS_NAND_BLOCK_SIZE)
 #else
-#define CONFIG_SYS_QE_FMAN_FW_IN_NOR
 #define CONFIG_SYS_FMAN_FW_ADDR		0x60900000
 #endif
 #endif
@@ -253,8 +249,9 @@
 			"${scriptaddr} ${prefix}${script}; "    \
 		"env exists secureboot && load ${devtype} "     \
 			"${devnum}:${distro_bootpart} "		\
-			"${scripthdraddr} ${prefix}${boot_script_hdr} " \
-			"&& esbc_validate ${scripthdraddr};"    \
+			"${scripthdraddr} ${prefix}${boot_script_hdr}; " \
+			"env exists secureboot "	\
+			"&& esbc_validate ${scripthdraddr};"	\
 		"source ${scriptaddr}\0"	  \
 	"qspi_bootcmd=echo Trying load from qspi..;"      \
 		"sf probe && sf read $load_addr "         \
