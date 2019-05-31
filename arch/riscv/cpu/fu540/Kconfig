@@ -3,7 +3,7 @@ config SIFIVE_DENALI
 	help
 	  Enable the SiFive Denali memory init code
 
-config LEGACY_MEMORY_INIT
+config SIFIVE_LEGACY_MEMORY_INIT
 	bool "SiFive FU540 legacy memory init"
 	help
 	  Legacy header file based memory init code

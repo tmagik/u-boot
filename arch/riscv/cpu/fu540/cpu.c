@@ -69,11 +69,12 @@ int arch_cpu_init(void)
 
 int dram_init(void)
 {
-
-	puts("dram_init() start\n");
+#if defined(CONFIG_SIFIVE_LEGACY_MEMORY_INIT)
 	const uint64_t ddr_end = CONFIG_SYS_SDRAM_BASE + DDR_SIZE;
 	uint32_t regdata;
 	volatile int ix;
+
+	printf("Running legacy HiFive Unleashed DRAM init\n");
 
 	while((g_aloe_prci->DDRPLLCFG0 & 0x80000000u) == 0); /* Wait for lock with PLL bypassed */
 
@@ -144,7 +145,11 @@ int dram_init(void)
 
 	#warning "get this from device tree!! "
 	gd->ram_size = 0x200000000;
-	puts("dram_init() end\n");
+
+#else
+	printf("dram_init: nothing to do?\n");
+#endif
+
 	return 0;
 }
 
