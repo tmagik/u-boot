@@ -18,7 +18,7 @@
 #ifdef CONFIG_OF_PRIOR_STAGE
 phys_addr_t prior_stage_fdt_address __attribute__((section(".data")));
 #endif
-#ifndef CONFIG_XIP
+#ifdef CONFIG_HART_LOTTERY
 u32 hart_lottery __attribute__((section(".data"))) = 0;
 
 /*
@@ -79,11 +79,14 @@ int arch_cpu_init_dm(void)
 	if (ret)
 		return ret;
 
+#warning "this code hangs if run on Aloe hart0, debug later"
+#if 0
 	/* Enable FPU */
 	if (supports_extension('d') || supports_extension('f')) {
 		csr_set(MODE_PREFIX(status), MSTATUS_FS);
 		csr_write(fcsr, 0);
 	}
+#endif
 
 	if (CONFIG_IS_ENABLED(RISCV_MMODE)) {
 		/*

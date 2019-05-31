@@ -192,12 +192,13 @@ config SBI_IPI
 	default y if RISCV_SMODE
 	depends on SMP
 
-config XIP
-	bool "XIP mode"
+config HART_LOTTERY
+	bool "Hart Lottery"
+	default y if !CONFIG_TARGET_AX25_AE350
 	help
-	  XIP (eXecute In Place) is a method for executing code directly
-	  from a NOR flash memory without copying the code to ram.
-	  Say yes here if U-Boot boots from flash directly.
+	  Use a dynamic hart lottery to determine which hardware thread (HART),
+	  or core, runs U-boot
+	  This is currently incompatible with XIP boot on Andes targets
 
 config STACK_SIZE_SHIFT
 	int
