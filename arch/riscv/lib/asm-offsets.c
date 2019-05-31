@@ -14,7 +14,7 @@
 int main(void)
 {
 	DEFINE(GD_BOOT_HART, offsetof(gd_t, arch.boot_hart));
-#ifndef CONFIG_XIP
+#ifdef CONFIG_HART_LOTTERY
 	DEFINE(GD_AVAILABLE_HARTS, offsetof(gd_t, arch.available_harts));
 #endif
 
