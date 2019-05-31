@@ -63,7 +63,7 @@ static int send_ipi_many(struct ipi_data *ipi)
 			continue;
 		}
 
-#ifndef CONFIG_XIP
+#ifdef CONFIG_HART_LOTTERY
 		/* skip if hart is not available */
 		if (!(gd->arch.available_harts & (1 << reg)))
 			continue;

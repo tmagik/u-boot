@@ -27,7 +27,7 @@ struct arch_global_data {
 #ifdef CONFIG_SMP
 	struct ipi_data ipi[CONFIG_NR_CPUS];
 #endif
-#ifndef CONFIG_XIP
+#ifdef CONFIG_HART_LOTTERY
 	ulong available_harts;
 #endif
 };
