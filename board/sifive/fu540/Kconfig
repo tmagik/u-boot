@@ -2,7 +2,7 @@ if TARGET_SIFIVE_FU540
 
 config SYS_BOARD
 	#TODO: make this something like 'hifive-unleashed'
-	default "hifive-unleashed-a00"
+	default "fu540"
 
 config SYS_VENDOR
 	default "sifive"
