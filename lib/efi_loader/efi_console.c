@@ -430,6 +430,7 @@ static efi_status_t EFIAPI efi_cout_enable_cursor(
 	EFI_ENTRY("%p, %d", this, enable);
 
 	printf(ESC"[?25%c", enable ? 'h' : 'l');
+	efi_con_mode.cursor_visible = !!enable;
 
 	return EFI_EXIT(EFI_SUCCESS);
 }
@@ -703,7 +704,7 @@ static void efi_cin_check(void)
 	efi_status_t ret;
 
 	if (key_available) {
-		efi_signal_event(efi_con_in.wait_for_key, true);
+		efi_signal_event(efi_con_in.wait_for_key);
 		return;
 	}
 
@@ -717,7 +718,7 @@ static void efi_cin_check(void)
 
 			/* Queue the wait for key event */
 			if (key_available)
-				efi_signal_event(efi_con_in.wait_for_key, true);
+				efi_signal_event(efi_con_in.wait_for_key);
 		}
 	}
 }

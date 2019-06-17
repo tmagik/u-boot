@@ -502,29 +502,33 @@ int __weak macb_linkspd_cb(struct udevice *dev, unsigned int speed)
 	ulong rate;
 	int ret;
 
+	/*
+	 * "tx_clk" is an optional clock source for MACB.
+	 * Ignore if it does not exist in DT.
+	 */
 	ret = clk_get_by_name(dev, "tx_clk", &tx_clk);
-	if (ret){
-		printf("macb_linkspeed_cb: could not find tx_clk in device tree\n");	
+	if (ret)
 		return 0;
-	}
 
 	switch (speed) {
 	case _10BASET:
-		rate = 2500000;
+		rate = 2500000;		/* 2.5 MHz */
 		break;
 	case _100BASET:
-		rate = 25000000;
+		rate = 25000000;	/* 25 MHz */
 		break;
 	case _1000BASET:
-	default:
-		rate = 125000000;
+		rate = 125000000;	/* 125 MHz */
 		break;
+	default:
+		/* does not change anything */
+		return 0;
 	}
 
-	if (tx_clk.dev){
-		clk_set_rate(&tx_clk, rate);
-	} else {
-		printf("macb_linkspeed_cb: error, no tx_clk.dev!!\n");
+	if (tx_clk.dev) {
+		ret = clk_set_rate(&tx_clk, rate);
+		if (ret)
+			return ret;
 	}
 #endif
 

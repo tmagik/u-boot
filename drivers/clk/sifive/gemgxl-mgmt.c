@@ -50,8 +50,8 @@ static const struct udevice_id gemgxl_mgmt_match[] = {
 	{ /* sentinel */ }
 };
 
-U_BOOT_DRIVER(gemgxl_mgmt) = {
-	.name = "gemgxl-mgmt",
+U_BOOT_DRIVER(sifive_gemgxl_mgmt) = {
+	.name = "sifive-gemgxl-mgmt",
 	.id = UCLASS_CLK,
 	.of_match = gemgxl_mgmt_match,
 	.ofdata_to_platdata = gemgxl_mgmt_ofdata_to_platdata,

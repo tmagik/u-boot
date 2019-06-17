@@ -149,8 +149,11 @@ static efi_status_t try_load_entry(u16 n, efi_handle_t *handle)
 
 		ret = EFI_CALL(efi_load_image(true, efi_root, lo.file_path,
 					      NULL, 0, handle));
-		if (ret != EFI_SUCCESS)
+		if (ret != EFI_SUCCESS) {
+			printf("Loading from Boot%04X '%ls' failed\n", n,
+			       lo.label);
 			goto error;
+		}
 
 		attributes = EFI_VARIABLE_BOOTSERVICE_ACCESS |
 			     EFI_VARIABLE_RUNTIME_ACCESS;
@@ -207,7 +210,8 @@ efi_status_t efi_bootmgr_load(efi_handle_t *handle)
 		ret = EFI_CALL(efi_set_variable(
 					L"BootNext",
 					(efi_guid_t *)&efi_global_variable_guid,
-					0, 0, &bootnext));
+					EFI_VARIABLE_NON_VOLATILE, 0,
+					&bootnext));
 
 		/* load BootNext */
 		if (ret == EFI_SUCCESS) {
@@ -215,6 +219,7 @@ efi_status_t efi_bootmgr_load(efi_handle_t *handle)
 				ret = try_load_entry(bootnext, handle);
 				if (ret == EFI_SUCCESS)
 					return ret;
+				printf("Loading from BootNext failed, falling back to BootOrder\n");
 			}
 		} else {
 			printf("Deleting BootNext failed\n");
