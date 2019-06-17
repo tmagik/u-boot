@@ -590,6 +590,7 @@ static struct clk_ops sifive_fu540_prci_ops = {
 
 static const struct udevice_id sifive_fu540_prci_ids[] = {
 	{ .compatible = "sifive,fu540-c000-prci0" },
+	{ .compatible = "sifive,fu540-c000-prci" },
 	{ .compatible = "sifive,aloeprci0" },
 	{ }
 };
