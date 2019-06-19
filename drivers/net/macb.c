@@ -83,7 +83,9 @@ struct macb_dma_desc {
 
 struct macb_device {
 	void			*regs;
-	unsigned int		dma_burst_length;
+	void			*regs1;
+
+	const struct macb_config*config;
 
 	unsigned int		rx_tail;
 	unsigned int		tx_head;
@@ -123,6 +125,9 @@ struct macb_device {
 
 struct macb_config {
 	unsigned int		dma_burst_length;
+
+	int			(*probe)(struct udevice *dev);
+	int			(*set_tx_clk)(struct udevice *dev, ulong rate);
 };
 
 #ifndef CONFIG_DM_ETH
@@ -483,20 +488,31 @@ static int macb_phy_find(struct macb_device *macb, const char *name)
  * when operation failed.
  */
 #ifdef CONFIG_DM_ETH
+static int macb_sifive_set_tx_clk(struct udevice *dev, ulong rate)
+{
+	struct macb_device *macb = dev_get_priv(dev);
+
+	if (!macb->regs1)
+		return -ENODEV;
+
+	/*
+	 * SiFive GEMGXL TX clock operation mode:
+	 *
+	 * 0 = GMII mode. Use 125 MHz gemgxlclk from PRCI in TX logic
+	 *     and output clock on GMII output signal GTX_CLK
+	 * 1 = MII mode. Use MII input signal TX_CLK in TX logic
+	 */
+	writel(rate != 125000000, macb->regs1);
+	return 0;
+}
+
 int __weak macb_linkspd_cb(struct udevice *dev, unsigned int speed)
 {
 #ifdef CONFIG_CLK
+	struct macb_device *macb = dev_get_priv(dev);
 	struct clk tx_clk;
 	ulong rate;
 	int ret;
-
-	/*
-	 * "tx_clk" is an optional clock source for MACB.
-	 * Ignore if it does not exist in DT.
-	 */
-	ret = clk_get_by_name(dev, "tx_clk", &tx_clk);
-	if (ret)
-		return 0;
 
 	switch (speed) {
 	case _10BASET:
@@ -512,6 +528,17 @@ int __weak macb_linkspd_cb(struct udevice *dev, unsigned int speed)
 		/* does not change anything */
 		return 0;
 	}
+
+	if (macb->config->set_tx_clk)
+		return macb->config->set_tx_clk(dev, rate);
+
+	/*
+	 * "tx_clk" is an optional clock source for MACB.
+	 * Ignore if it does not exist in DT.
+	 */
+	ret = clk_get_by_name(dev, "tx_clk", &tx_clk);
+	if (ret)
+		return 0;
 
 	if (tx_clk.dev) {
 		ret = clk_set_rate(&tx_clk, rate);
@@ -701,12 +728,14 @@ static void gmac_configure_dma(struct macb_device *macb)
 	u32 buffer_size;
 	u32 dmacfg;
 
+	if (!macb->config->dma_burst_length)
+		return;
+
 	buffer_size = 128 / RX_BUFFER_MULTIPLE;
 	dmacfg = gem_readl(macb, DMACFG) & ~GEM_BF(RXBS, -1L);
 	dmacfg |= GEM_BF(RXBS, buffer_size);
 
-	if (macb->dma_burst_length)
-		dmacfg = GEM_BFINS(FBLDO, macb->dma_burst_length, dmacfg);
+	dmacfg = GEM_BFINS(FBLDO, macb->config->dma_burst_length, dmacfg);
 
 	dmacfg |= GEM_BIT(TXPBMS) | GEM_BF(RXBMS, -1L);
 	dmacfg &= ~GEM_BIT(ENDIA_PKT);
@@ -1171,13 +1200,25 @@ static const struct macb_config default_gem_config = {
 	.dma_burst_length = 16,
 };
 
+static int macb_sifive_probe(struct udevice *dev)
+{
+	struct macb_device *macb = dev_get_priv(dev);
+	fdt_addr_t addr;
+
+	addr = dev_read_addr_index(dev, 1);
+	if (addr == FDT_ADDR_T_NONE)
+		return -ENODEV;
+	macb->regs1 = (void __iomem *)addr;
+
+	return 0;
+}
+
 static int macb_eth_probe(struct udevice *dev)
 {
-	const struct macb_config *macb_config;
 	struct eth_pdata *pdata = dev_get_platdata(dev);
 	struct macb_device *macb = dev_get_priv(dev);
 	const char *phy_mode;
-	__maybe_unused int ret;
+	int ret;
 
 	phy_mode = fdt_getprop(gd->fdt_blob, dev_of_offset(dev), "phy-mode",
 			       NULL);
@@ -1190,11 +1231,16 @@ static int macb_eth_probe(struct udevice *dev)
 
 	macb->regs = (void *)pdata->iobase;
 
-	macb_config = (struct macb_config *)dev_get_driver_data(dev);
-	if (!macb_config)
-		macb_config = &default_gem_config;
+	macb->config = (struct macb_config *)dev_get_driver_data(dev);
+	if (!macb->config)
+		macb->config = &default_gem_config;
 
-	macb->dma_burst_length = macb_config->dma_burst_length;
+	if (macb->config->probe) {
+		ret = macb->config->probe(dev);
+		if (ret)
+			return ret;
+	}
+
 #ifdef CONFIG_CLK
 	ret = macb_enable_clk(dev);
 	if (ret)
@@ -1259,6 +1305,11 @@ static const struct macb_config sama5d4_config = {
 	.dma_burst_length = 4,
 };
 
+static const struct macb_config sifive_config = {
+	.probe = macb_sifive_probe,
+	.set_tx_clk = macb_sifive_set_tx_clk,
+};
+
 static const struct udevice_id macb_eth_ids[] = {
 	{ .compatible = "cdns,macb" },
 	{ .compatible = "cdns,at91sam9260-macb" },
@@ -1266,6 +1317,7 @@ static const struct udevice_id macb_eth_ids[] = {
 	{ .compatible = "atmel,sama5d3-gem" },
 	{ .compatible = "atmel,sama5d4-gem", .data = (ulong)&sama5d4_config },
 	{ .compatible = "cdns,zynq-gem" },
+	{ .compatible = "sifive,fu540-macb", .data = (ulong)&sifive_config },
 	{ }
 };
 
