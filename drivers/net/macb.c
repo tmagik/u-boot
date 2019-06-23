@@ -1183,14 +1183,19 @@ static int macb_enable_clk(struct udevice *dev)
 	 * don't fail for ret == -ENOSYS.
 	 */
 	ret = clk_enable(&clk);
-	if (ret && ret != -ENOSYS)
+	if (ret && ret != -ENOSYS){
+		printf("%s: Could not find clk index 0\n", __func__);
 		return ret;
+	}
 
 	clk_rate = clk_get_rate(&clk);
-	if (!clk_rate)
+	if (!clk_rate){
+		printf("%s: Error getting clk index 0 rate0\n", __func__);
 		return -EINVAL;
+	}
 
 	macb->pclk_rate = clk_rate;
+	printf("%s: macb->pclk_rate is 0x%d\n", __func__, clk_rate);
 
 	return 0;
 }
