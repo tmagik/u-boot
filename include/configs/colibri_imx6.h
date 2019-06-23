@@ -50,8 +50,6 @@
 #define CONFIG_FEC_XCV_TYPE		RMII
 #define CONFIG_ETHPRIME			"FEC"
 #define CONFIG_FEC_MXC_PHYADDR		1
-#define CONFIG_IP_DEFRAG
-#define CONFIG_TFTP_BLOCKSIZE		16352
 #define CONFIG_TFTP_TSIZE
 
 /* USB Configs */
@@ -190,7 +188,7 @@
 #define CONFIG_EXTRA_ENV_SETTINGS \
 	BOOTENV \
 	"bootcmd=run emmcboot ; echo ; echo emmcboot failed ; " \
-		"run distro_bootcmd ; " \
+		"setenv fdtfile ${fdt_file}; run distro_bootcmd ; " \
 		"usb start ; " \
 		"setenv stdout serial,vga ; setenv stdin serial,usbkbd\0" \
 	"boot_file=zImage\0" \

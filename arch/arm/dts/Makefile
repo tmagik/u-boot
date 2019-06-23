@@ -108,11 +108,14 @@ dtb-$(CONFIG_ROCKCHIP_RK3399) += \
 	rk3399-gru-bob.dtb \
 	rk3399-nanopc-t4.dtb \
 	rk3399-nanopi-m4.dtb \
+	rk3399-nanopi-neo4.dtb \
 	rk3399-orangepi.dtb \
 	rk3399-puma-ddr1333.dtb \
 	rk3399-puma-ddr1600.dtb \
 	rk3399-puma-ddr1866.dtb \
+	rk3399-rock-pi-4.dtb \
 	rk3399-rock960.dtb \
+	rk3399-rockpro64.dtb
 
 dtb-$(CONFIG_ROCKCHIP_RV1108) += \
 	rv1108-elgin-r1.dtb \
@@ -537,7 +540,8 @@ dtb-$(CONFIG_MX53) += imx53-cx9020.dtb \
 dtb-$(CONFIG_MX6Q) += \
 	imx6-apalis.dtb \
 	imx6q-display5.dtb \
-	imx6q-logicpd.dtb
+	imx6q-logicpd.dtb \
+	imx6q-novena.dtb
 
 dtb-$(CONFIG_TARGET_TBS2910) += \
 	imx6q-tbs2910.dtb
@@ -567,7 +571,8 @@ dtb-$(CONFIG_MX6SLL) += imx6sll-evk.dtb
 
 dtb-$(CONFIG_MX6SX) += \
 	imx6sx-sabreauto.dtb \
-	imx6sx-sdb.dtb
+	imx6sx-sdb.dtb \
+	imx6sx-softing-vining-2000.dtb
 
 dtb-$(CONFIG_MX6UL) += \
 	imx6ul-geam.dtb \
@@ -585,10 +590,13 @@ dtb-$(CONFIG_MX6UL) += \
 dtb-$(CONFIG_MX6ULL) += \
 	imx6ull-14x14-evk.dtb \
 	imx6ull-colibri.dtb \
+	imx6ull-phycore-segin.dtb \
 	imx6ull-dart-6ul.dtb
 
 dtb-$(CONFIG_ARCH_MX6) += \
-	imx6-colibri.dtb
+	imx6-apalis.dtb \
+	imx6-colibri.dtb \
+	imx6q-dhcom-pdk2.dtb
 
 dtb-$(CONFIG_MX7) += imx7d-sdb.dtb \
 	imx7d-sdb-qspi.dtb \
@@ -602,8 +610,10 @@ dtb-$(CONFIG_MX7) += imx7d-sdb.dtb \
 dtb-$(CONFIG_ARCH_MX7ULP) += imx7ulp-evk.dtb
 
 dtb-$(CONFIG_ARCH_IMX8) += \
-	fsl-imx8qxp-mek.dtb \
+	fsl-imx8qm-apalis.dtb \
 	fsl-imx8qm-mek.dtb \
+	fsl-imx8qxp-colibri.dtb \
+	fsl-imx8qxp-mek.dtb
 
 dtb-$(CONFIG_ARCH_IMX8M) += fsl-imx8mq-evk.dtb
 
@@ -747,6 +757,7 @@ dtb-$(CONFIG_ARCH_STI) += stih410-b2260.dtb
 
 dtb-$(CONFIG_TARGET_STM32MP1) += \
 	stm32mp157a-dk1.dtb \
+	stm32mp157a-avenger96.dtb \
 	stm32mp157c-dk2.dtb \
 	stm32mp157c-ed1.dtb \
 	stm32mp157c-ev1.dtb

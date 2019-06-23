@@ -138,6 +138,8 @@ config SYS_MALLOC_F_LEN
 	depends on SYS_MALLOC_F
 	default 0x1000 if AM33XX
 	default 0x2800 if SANDBOX
+	default 0x2000 if (ARCH_IMX8 || ARCH_IMX8M || ARCH_MX7 || \
+			   ARCH_MX7ULP || ARCH_MX6 || ARCH_MX5)
 	default 0x400
 	help
 	  Before relocation, memory is very limited on many platforms. Still,
@@ -250,6 +252,23 @@ config BUILD_TARGET
 	  CONFIG_BUILD_TARGET in the SoC / board header, this
 	  special image will be automatically built upon calling
 	  make / buildman.
+
+config SYS_CUSTOM_LDSCRIPT
+	bool "Use a custom location for the U-Boot linker script"
+	help
+	  Normally when linking U-Boot we will look in the board directory,
+	  the CPU directory and finally the "cpu" directory of the architecture
+	  for the ile "u-boot.lds" and use that as our linker.  However, in
+	  some cases we need to provide a different linker script.  To do so,
+	  enable this option and then provide the location under
+	  CONFIG_SYS_LDSCRIPT.
+
+config SYS_LDSCRIPT
+	depends on SYS_CUSTOM_LDSCRIPT
+	string "Custom ldscript location"
+	help
+	  Path within the source tree to the linker script to use for the
+	  main U-Boot binary.
 
 endmenu		# General setup
 

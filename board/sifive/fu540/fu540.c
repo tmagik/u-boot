@@ -14,6 +14,7 @@
 
 #include <common.h>
 #include <dm.h>
+#if defined(CONFIG_SIFIVE_LEGACY_MEMORY_INIT)
 #include "ddrregs.h"
 
 DECLARE_GLOBAL_DATA_PTR;
@@ -40,6 +41,130 @@ struct hifive_gpio_regs
 };
 
 struct hifive_gpio_regs *g_aloe_gpio = (struct hifive_gpio_regs *)HIFIVE_BASE_GPIO;
+#endif
+
+#include <linux/delay.h>
+#include <linux/io.h>
+
+#ifdef CONFIG_MISC_INIT_R
+
+#define FU540_OTP_BASE_ADDR			0x10070000
+
+struct fu540_otp_regs {
+	u32 pa;     /* Address input */
+	u32 paio;   /* Program address input */
+	u32 pas;    /* Program redundancy cell selection input */
+	u32 pce;    /* OTP Macro enable input */
+	u32 pclk;   /* Clock input */
+	u32 pdin;   /* Write data input */
+	u32 pdout;  /* Read data output */
+	u32 pdstb;  /* Deep standby mode enable input (active low) */
+	u32 pprog;  /* Program mode enable input */
+	u32 ptc;    /* Test column enable input */
+	u32 ptm;    /* Test mode enable input */
+	u32 ptm_rep;/* Repair function test mode enable input */
+	u32 ptr;    /* Test row enable input */
+	u32 ptrim;  /* Repair function enable input */
+	u32 pwe;    /* Write enable input (defines program cycle) */
+} __packed;
+
+#define BYTES_PER_FUSE				4
+#define NUM_FUSES				0x1000
+
+static int fu540_otp_read(int offset, void *buf, int size)
+{
+	struct fu540_otp_regs *regs = (void __iomem *)FU540_OTP_BASE_ADDR;
+	unsigned int i;
+	int fuseidx = offset / BYTES_PER_FUSE;
+	int fusecount = size / BYTES_PER_FUSE;
+	u32 fusebuf[fusecount];
+
+	/* check bounds */
+	if (offset < 0 || size < 0)
+		return -EINVAL;
+	if (fuseidx >= NUM_FUSES)
+		return -EINVAL;
+	if ((fuseidx + fusecount) > NUM_FUSES)
+		return -EINVAL;
+
+	/* init OTP */
+	writel(0x01, &regs->pdstb); /* wake up from stand-by */
+	writel(0x01, &regs->ptrim); /* enable repair function */
+	writel(0x01, &regs->pce);   /* enable input */
+
+	/* read all requested fuses */
+	for (i = 0; i < fusecount; i++, fuseidx++) {
+		writel(fuseidx, &regs->pa);
+
+		/* cycle clock to read */
+		writel(0x01, &regs->pclk);
+		mdelay(1);
+		writel(0x00, &regs->pclk);
+		mdelay(1);
+
+		/* read the value */
+		fusebuf[i] = readl(&regs->pdout);
+	}
+
+	/* shut down */
+	writel(0, &regs->pce);
+	writel(0, &regs->ptrim);
+	writel(0, &regs->pdstb);
+
+	/* copy out */
+	memcpy(buf, fusebuf, size);
+
+	return 0;
+}
+
+static u32 fu540_read_serialnum(void)
+{
+	int ret;
+	u32 serial[2] = {0};
+
+	for (int i = 0xfe * 4; i > 0; i -= 8) {
+		ret = fu540_otp_read(i, serial, sizeof(serial));
+		if (ret) {
+			printf("%s: error reading from OTP\n", __func__);
+			break;
+		}
+		if (serial[0] == ~serial[1])
+			return serial[0];
+	}
+
+	return 0;
+}
+
+static void fu540_setup_macaddr(u32 serialnum)
+{
+	/* Default MAC address */
+	unsigned char mac[6] = { 0x70, 0xb3, 0xd5, 0x92, 0xf0, 0x00 };
+
+	/*
+	 * We derive our board MAC address by ORing last three bytes
+	 * of board serial number to above default MAC address.
+	 *
+	 * This logic of deriving board MAC address is taken from
+	 * SiFive FSBL and is kept unchanged.
+	 */
+	mac[5] |= (serialnum >>  0) & 0xff;
+	mac[4] |= (serialnum >>  8) & 0xff;
+	mac[3] |= (serialnum >> 16) & 0xff;
+
+	/* Update environment variable */
+	eth_env_set_enetaddr("ethaddr", mac);
+}
+
+int misc_init_r(void)
+{
+	/* Set ethaddr environment variable if not set */
+	if (!env_get("ethaddr"))
+		fu540_setup_macaddr(fu540_read_serialnum());
+
+	return 0;
+}
+
+#endif
 
 int board_init(void)
 {
@@ -90,24 +215,9 @@ void reset_phy(void)
 
 }
 
-/* This define is a value used for error/unknown serial. If we really care about distinguishing errors and 0 is valid, we'll need a different one. */
-#define ERROR_READING_SERIAL_NUMBER	   0
-
-#ifdef CONFIG_MISC_INIT_R
-static u32 setup_serialnum(void);
-static void setup_macaddr(u32 serialnum);
-
-int misc_init_r(void)
-{	
-	if (!env_get("serial#")) {
-		u32 serialnum = setup_serialnum();
-		setup_macaddr(serialnum);
-	}
-	return 0;
-}
-#endif
 
 #if defined(CONFIG_MACB) && !defined(CONFIG_DM_ETH)
+#warning "TODO: remove me"
 int board_eth_init(bd_t *bd)
 {	
 	int rc = 0;
@@ -117,55 +227,3 @@ int board_eth_init(bd_t *bd)
 	return rc;
 }
 #endif
-
-#if CONFIG_IS_ENABLED(HIFIVE_OTP)
-static u32 otp_read_serialnum(struct udevice *dev)
-{
-	u32 serial[2] = {0};
-	int ret;
-	for (int i = 0xfe * 4; i > 0; i -= 8) {
-		ret = misc_read(dev, i, serial, sizeof(serial));
-		if (ret) {
-			printf("%s: error reading serial from OTP\n", __func__);
-			break;
-		}
-		if (serial[0] == ~serial[1])
-			return serial[0];
-	}
-	return ERROR_READING_SERIAL_NUMBER;
-}
-#endif
-
-static u32 setup_serialnum(void)
-{
-	u32 serial = ERROR_READING_SERIAL_NUMBER;
-	char serial_str[6];
-
-#if CONFIG_IS_ENABLED(HIFIVE_OTP)
-	struct udevice *dev;
-	int ret;
-
-	// init OTP
-	ret = uclass_get_device_by_driver(UCLASS_MISC, DM_GET_DRIVER(hifive_otp), &dev);
-	if (ret) {
-		debug("%s: could not find otp device\n", __func__);
-		return serial;
-	}
-
-	// read serial from OTP and set env var
-	serial = otp_read_serialnum(dev);
-	snprintf(serial_str, sizeof(serial_str), "%05"PRIu32, serial);
-	env_set("serial#", serial_str);
-#endif
-
-	return serial;
-}
-
-static void setup_macaddr(u32 serialnum) {
-	// OR the serial into the MAC -- see SiFive FSBL
-	unsigned char mac[6] = { 0x70, 0xb3, 0xd5, 0x92, 0xf0, 0x00 };
-	mac[5] |= (serialnum >>  0) & 0xff;
-	mac[4] |= (serialnum >>  8) & 0xff;
-	mac[3] |= (serialnum >> 16) & 0xff;
-	eth_env_set_enetaddr("ethaddr", mac);
-}

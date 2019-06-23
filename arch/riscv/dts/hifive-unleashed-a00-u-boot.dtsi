@@ -90,19 +90,7 @@
 			reg = <0x0 0x18000000 0x0 0x8000000>;
 			reg-names = "mem";
 		};
-		L52: ethernet@10090000 {
-			compatible = "cdns,macb";
-			interrupt-parent = <&plic0>;
-			interrupts = <53>;
-			reg = <0x0 0x10090000 0x0 0x2000>;
-			reg-names = "control";
-
-			local-mac-address = [00 00 00 00 00 00];
-			phy-mode = "gmii";
-			clock-names = "pclk", "hclk", "tx_clk";
-			clocks = <&prci 1>, <&prci 1>, <&gemgxl>;
-			#address-cells = <1>;
-			#size-cells = <0>;
+		&eth0 {
 			phy1: ethernet-phy@0 {
 				reg = <0>;
 				reset-gpios = <&L31 12 1>;

@@ -27,6 +27,12 @@ LIST_HEAD(efi_obj_list);
 /* List of all events */
 LIST_HEAD(efi_events);
 
+/* List of queued events */
+LIST_HEAD(efi_event_queue);
+
+/* Flag to disable timer activity in ExitBootServices() */
+static bool timers_enabled = true;
+
 /* List of all events registered by RegisterProtocolNotify() */
 LIST_HEAD(efi_register_notify_events);
 
@@ -161,32 +167,75 @@ const char *__efi_nesting_dec(void)
 }
 
 /**
+ * efi_event_is_queued() - check if an event is queued
+ *
+ * @event:	event
+ * Return:	true if event is queued
+ */
+static bool efi_event_is_queued(struct efi_event *event)
+{
+	return !!event->queue_link.next;
+}
+
+/**
+ * efi_process_event_queue() - process event queue
+ */
+static void efi_process_event_queue(void)
+{
+	while (!list_empty(&efi_event_queue)) {
+		struct efi_event *event;
+		efi_uintn_t old_tpl;
+
+		event = list_first_entry(&efi_event_queue, struct efi_event,
+					 queue_link);
+		if (efi_tpl >= event->notify_tpl)
+			return;
+		list_del(&event->queue_link);
+		event->queue_link.next = NULL;
+		event->queue_link.prev = NULL;
+		/* Events must be executed at the event's TPL */
+		old_tpl = efi_tpl;
+		efi_tpl = event->notify_tpl;
+		EFI_CALL_VOID(event->notify_function(event,
+						     event->notify_context));
+		efi_tpl = old_tpl;
+		if (event->type == EVT_NOTIFY_SIGNAL)
+			event->is_signaled = 0;
+	}
+}
+
+/**
  * efi_queue_event() - queue an EFI event
  * @event:     event to signal
- * @check_tpl: check the TPL level
  *
  * This function queues the notification function of the event for future
  * execution.
  *
- * The notification function is called if the task priority level of the event
- * is higher than the current task priority level.
- *
- * For the SignalEvent service see efi_signal_event_ext.
- *
  */
-static void efi_queue_event(struct efi_event *event, bool check_tpl)
+static void efi_queue_event(struct efi_event *event)
 {
-	if (event->notify_function) {
-		event->is_queued = true;
-		/* Check TPL */
-		if (check_tpl && efi_tpl >= event->notify_tpl)
-			return;
-		event->is_queued = false;
-		EFI_CALL_VOID(event->notify_function(event,
-						     event->notify_context));
-	} else {
-		event->is_queued = false;
+	struct efi_event *item = NULL;
+
+	if (!event->notify_function)
+		return;
+
+	if (!efi_event_is_queued(event)) {
+		/*
+		 * Events must be notified in order of decreasing task priority
+		 * level. Insert the new event accordingly.
+		 */
+		list_for_each_entry(item, &efi_event_queue, queue_link) {
+			if (item->notify_tpl < event->notify_tpl) {
+				list_add_tail(&event->queue_link,
+					      &item->queue_link);
+				event = NULL;
+				break;
+			}
+		}
+		if (event)
+			list_add_tail(&event->queue_link, &efi_event_queue);
 	}
+	efi_process_event_queue();
 }
 
 /**
@@ -211,7 +260,6 @@ efi_status_t is_valid_tpl(efi_uintn_t tpl)
 /**
  * efi_signal_event() - signal an EFI event
  * @event:     event to signal
- * @check_tpl: check the TPL level
  *
  * This function signals an event. If the event belongs to an event group all
  * events of the group are signaled. If they are of type EVT_NOTIFY_SIGNAL
@@ -219,8 +267,10 @@ efi_status_t is_valid_tpl(efi_uintn_t tpl)
  *
  * For the SignalEvent service see efi_signal_event_ext.
  */
-void efi_signal_event(struct efi_event *event, bool check_tpl)
+void efi_signal_event(struct efi_event *event)
 {
+	if (event->is_signaled)
+		return;
 	if (event->group) {
 		struct efi_event *evt;
 
@@ -234,20 +284,15 @@ void efi_signal_event(struct efi_event *event, bool check_tpl)
 			if (evt->is_signaled)
 				continue;
 			evt->is_signaled = true;
-			if (evt->type & EVT_NOTIFY_SIGNAL &&
-			    evt->notify_function)
-				evt->is_queued = true;
 		}
 		list_for_each_entry(evt, &efi_events, link) {
 			if (!evt->group || guidcmp(evt->group, event->group))
 				continue;
-			if (evt->is_queued)
-				efi_queue_event(evt, check_tpl);
+			efi_queue_event(evt);
 		}
 	} else {
 		event->is_signaled = true;
-		if (event->type & EVT_NOTIFY_SIGNAL)
-			efi_queue_event(event, check_tpl);
+		efi_queue_event(event);
 	}
 }
 
@@ -637,8 +682,6 @@ efi_status_t efi_create_event(uint32_t type, efi_uintn_t notify_tpl,
 	evt->group = group;
 	/* Disable timers on boot up */
 	evt->trigger_next = -1ULL;
-	evt->is_queued = false;
-	evt->is_signaled = false;
 	list_add_tail(&evt->link, &efi_events);
 	*event = evt;
 	return EFI_SUCCESS;
@@ -733,8 +776,8 @@ void efi_timer_check(void)
 	u64 now = timer_get_us();
 
 	list_for_each_entry(evt, &efi_events, link) {
-		if (evt->is_queued)
-			efi_queue_event(evt, true);
+		if (!timers_enabled)
+			continue;
 		if (!(evt->type & EVT_TIMER) || now < evt->trigger_next)
 			continue;
 		switch (evt->trigger_type) {
@@ -748,8 +791,9 @@ void efi_timer_check(void)
 			continue;
 		}
 		evt->is_signaled = false;
-		efi_signal_event(evt, true);
+		efi_signal_event(evt);
 	}
+	efi_process_event_queue();
 	WATCHDOG_RESET();
 }
 
@@ -850,7 +894,7 @@ static efi_status_t EFIAPI efi_wait_for_event(efi_uintn_t num_events,
 		if (!event[i]->type || event[i]->type & EVT_NOTIFY_SIGNAL)
 			return EFI_EXIT(EFI_INVALID_PARAMETER);
 		if (!event[i]->is_signaled)
-			efi_queue_event(event[i], true);
+			efi_queue_event(event[i]);
 	}
 
 	/* Wait for signal */
@@ -894,7 +938,7 @@ static efi_status_t EFIAPI efi_signal_event_ext(struct efi_event *event)
 	EFI_ENTRY("%p", event);
 	if (efi_is_event(event) != EFI_SUCCESS)
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
-	efi_signal_event(event, true);
+	efi_signal_event(event);
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
@@ -921,10 +965,21 @@ static efi_status_t EFIAPI efi_close_event(struct efi_event *event)
 	list_for_each_entry_safe(item, next, &efi_register_notify_events,
 				 link) {
 		if (event == item->event) {
+			struct efi_protocol_notification *hitem, *hnext;
+
+			/* Remove signaled handles */
+			list_for_each_entry_safe(hitem, hnext, &item->handles,
+						 link) {
+				list_del(&hitem->link);
+				free(hitem);
+			}
 			list_del(&item->link);
 			free(item);
 		}
 	}
+	/* Remove event from queue */
+	if (efi_event_is_queued(event))
+		list_del(&event->queue_link);
 
 	list_del(&event->link);
 	free(event);
@@ -953,7 +1008,7 @@ static efi_status_t EFIAPI efi_check_event(struct efi_event *event)
 	    event->type & EVT_NOTIFY_SIGNAL)
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 	if (!event->is_signaled)
-		efi_queue_event(event, true);
+		efi_queue_event(event);
 	if (event->is_signaled) {
 		event->is_signaled = false;
 		return EFI_EXIT(EFI_SUCCESS);
@@ -1049,8 +1104,20 @@ efi_status_t efi_add_protocol(const efi_handle_t handle,
 
 	/* Notify registered events */
 	list_for_each_entry(event, &efi_register_notify_events, link) {
-		if (!guidcmp(protocol, &event->protocol))
-			efi_signal_event(event->event, true);
+		if (!guidcmp(protocol, &event->protocol)) {
+			struct efi_protocol_notification *notif;
+
+			notif = calloc(1, sizeof(*notif));
+			if (!notif) {
+				list_del(&handler->link);
+				free(handler);
+				return EFI_OUT_OF_RESOURCES;
+			}
+			notif->handle = handle;
+			list_add_tail(&notif->link, &event->handles);
+			event->event->is_signaled = false;
+			efi_signal_event(event->event);
+		}
 	}
 
 	if (!guidcmp(&efi_guid_device_path, protocol))
@@ -1134,11 +1201,15 @@ static efi_status_t efi_get_drivers(efi_handle_t handle,
 				++count;
 		}
 	}
+	*number_of_drivers = 0;
+	if (!count) {
+		*driver_handle_buffer = NULL;
+		return EFI_SUCCESS;
+	}
 	/*
 	 * Create buffer. In case of duplicate driver assignments the buffer
 	 * will be too large. But that does not harm.
 	 */
-	*number_of_drivers = 0;
 	*driver_handle_buffer = calloc(count, sizeof(efi_handle_t));
 	if (!*driver_handle_buffer)
 		return EFI_OUT_OF_RESOURCES;
@@ -1194,7 +1265,8 @@ static efi_status_t efi_disconnect_all_drivers
 			      &driver_handle_buffer);
 	if (ret != EFI_SUCCESS)
 		return ret;
-
+	if (!number_of_drivers)
+		return EFI_SUCCESS;
 	ret = EFI_NOT_FOUND;
 	while (number_of_drivers) {
 		r = EFI_CALL(efi_disconnect_controller(
@@ -1241,10 +1313,6 @@ static efi_status_t efi_uninstall_protocol
 		goto out;
 	/* Disconnect controllers */
 	efi_disconnect_all_drivers(efiobj, protocol, NULL);
-	if (!list_empty(&handler->open_infos)) {
-		r =  EFI_ACCESS_DENIED;
-		goto out;
-	}
 	/* Close protocol */
 	list_for_each_entry_safe(item, pos, &handler->open_infos, link) {
 		if (item->info.attributes ==
@@ -1332,6 +1400,7 @@ static efi_status_t EFIAPI efi_register_protocol_notify(
 
 	item->event = event;
 	memcpy(&item->protocol, protocol, sizeof(efi_guid_t));
+	INIT_LIST_HEAD(&item->handles);
 
 	list_add_tail(&item->link, &efi_register_notify_events);
 
@@ -1359,7 +1428,6 @@ static int efi_search(enum efi_locate_search_type search_type,
 	switch (search_type) {
 	case ALL_HANDLES:
 		return 0;
-	case BY_REGISTER_NOTIFY:
 	case BY_PROTOCOL:
 		ret = efi_search_protocol(handle, protocol, NULL);
 		return (ret != EFI_SUCCESS);
@@ -1367,6 +1435,27 @@ static int efi_search(enum efi_locate_search_type search_type,
 		/* Invalid search type */
 		return -1;
 	}
+}
+
+/**
+ * efi_check_register_notify_event() - check if registration key is valid
+ *
+ * Check that a pointer is a valid registration key as returned by
+ * RegisterProtocolNotify().
+ *
+ * @key:	registration key
+ * Return:	valid registration key or NULL
+ */
+static struct efi_register_notify_event *efi_check_register_notify_event
+								(void *key)
+{
+	struct efi_register_notify_event *event;
+
+	list_for_each_entry(event, &efi_register_notify_events, link) {
+		if (event == (struct efi_register_notify_event *)key)
+			return event;
+	}
+	return NULL;
 }
 
 /**
@@ -1390,7 +1479,8 @@ static efi_status_t efi_locate_handle(
 {
 	struct efi_object *efiobj;
 	efi_uintn_t size = 0;
-	struct efi_register_notify_event *item, *event = NULL;
+	struct efi_register_notify_event *event;
+	struct efi_protocol_notification *handle = NULL;
 
 	/* Check parameters */
 	switch (search_type) {
@@ -1400,17 +1490,9 @@ static efi_status_t efi_locate_handle(
 		if (!search_key)
 			return EFI_INVALID_PARAMETER;
 		/* Check that the registration key is valid */
-		list_for_each_entry(item, &efi_register_notify_events, link) {
-			if (item ==
-			    (struct efi_register_notify_event *)search_key) {
-				event = item;
-				break;
-			}
-		}
+		event = efi_check_register_notify_event(search_key);
 		if (!event)
 			return EFI_INVALID_PARAMETER;
-
-		protocol = &event->protocol;
 		break;
 	case BY_PROTOCOL:
 		if (!protocol)
@@ -1421,13 +1503,22 @@ static efi_status_t efi_locate_handle(
 	}
 
 	/* Count how much space we need */
-	list_for_each_entry(efiobj, &efi_obj_list, link) {
-		if (!efi_search(search_type, protocol, efiobj))
-			size += sizeof(void *);
+	if (search_type == BY_REGISTER_NOTIFY) {
+		if (list_empty(&event->handles))
+			return EFI_NOT_FOUND;
+		handle = list_first_entry(&event->handles,
+					  struct efi_protocol_notification,
+					  link);
+		efiobj = handle->handle;
+		size += sizeof(void *);
+	} else {
+		list_for_each_entry(efiobj, &efi_obj_list, link) {
+			if (!efi_search(search_type, protocol, efiobj))
+				size += sizeof(void *);
+		}
+		if (size == 0)
+			return EFI_NOT_FOUND;
 	}
-
-	if (size == 0)
-		return EFI_NOT_FOUND;
 
 	if (!buffer_size)
 		return EFI_INVALID_PARAMETER;
@@ -1444,9 +1535,14 @@ static efi_status_t efi_locate_handle(
 		return EFI_INVALID_PARAMETER;
 
 	/* Then fill the array */
-	list_for_each_entry(efiobj, &efi_obj_list, link) {
-		if (!efi_search(search_type, protocol, efiobj))
-			*buffer++ = efiobj;
+	if (search_type == BY_REGISTER_NOTIFY) {
+		*buffer = efiobj;
+		list_del(&handle->link);
+	} else {
+		list_for_each_entry(efiobj, &efi_obj_list, link) {
+			if (!efi_search(search_type, protocol, efiobj))
+				*buffer++ = efiobj;
+		}
 	}
 
 	return EFI_SUCCESS;
@@ -1545,7 +1641,7 @@ out:
 	/* Notify that the configuration table was changed */
 	list_for_each_entry(evt, &efi_events, link) {
 		if (evt->group && !guidcmp(evt->group, guid)) {
-			efi_signal_event(evt, false);
+			efi_signal_event(evt);
 			break;
 		}
 	}
@@ -1683,7 +1779,7 @@ efi_status_t efi_load_image_from_path(struct efi_device_path *file_path,
 	/* Open file */
 	f = efi_file_from_path(file_path);
 	if (!f)
-		return EFI_DEVICE_ERROR;
+		return EFI_NOT_FOUND;
 
 	/* Get file size */
 	bs = 0;
@@ -1760,17 +1856,10 @@ efi_status_t EFIAPI efi_load_image(bool boot_policy,
 	EFI_ENTRY("%d, %p, %pD, %p, %zd, %p", boot_policy, parent_image,
 		  file_path, source_buffer, source_size, image_handle);
 
-	if (!image_handle || !efi_search_obj(parent_image)) {
-		ret = EFI_INVALID_PARAMETER;
-		goto error;
-	}
-
-	if (!source_buffer && !file_path) {
-		ret = EFI_NOT_FOUND;
-		goto error;
-	}
-	/* The parent image handle must refer to a loaded image */
-	if (!parent_image->type) {
+	if (!image_handle || (!source_buffer && !file_path) ||
+	    !efi_search_obj(parent_image) ||
+	    /* The parent image handle must refer to a loaded image */
+	    !parent_image->type) {
 		ret = EFI_INVALID_PARAMETER;
 		goto error;
 	}
@@ -1844,19 +1933,22 @@ static efi_status_t EFIAPI efi_exit_boot_services(efi_handle_t image_handle,
 						  efi_uintn_t map_key)
 {
 	struct efi_event *evt;
+	efi_status_t ret = EFI_SUCCESS;
 
 	EFI_ENTRY("%p, %zx", image_handle, map_key);
 
 	/* Check that the caller has read the current memory map */
-	if (map_key != efi_memory_map_key)
-		return EFI_INVALID_PARAMETER;
-
-	/* Make sure that notification functions are not called anymore */
-	efi_tpl = TPL_HIGH_LEVEL;
+	if (map_key != efi_memory_map_key) {
+		ret = EFI_INVALID_PARAMETER;
+		goto out;
+	}
 
 	/* Check if ExitBootServices has already been called */
 	if (!systab.boottime)
-		return EFI_EXIT(EFI_SUCCESS);
+		goto out;
+
+	/* Stop all timer related activities */
+	timers_enabled = false;
 
 	/* Add related events to the event group */
 	list_for_each_entry(evt, &efi_events, link) {
@@ -1868,10 +1960,13 @@ static efi_status_t EFIAPI efi_exit_boot_services(efi_handle_t image_handle,
 		if (evt->group &&
 		    !guidcmp(evt->group,
 			     &efi_guid_event_group_exit_boot_services)) {
-			efi_signal_event(evt, false);
+			efi_signal_event(evt);
 			break;
 		}
 	}
+
+	/* Make sure that notification functions are not called anymore */
+	efi_tpl = TPL_HIGH_LEVEL;
 
 	/* TODO: Should persist EFI variables here */
 
@@ -1898,8 +1993,8 @@ static efi_status_t EFIAPI efi_exit_boot_services(efi_handle_t image_handle,
 	/* Give the payload some time to boot */
 	efi_set_watchdog(0);
 	WATCHDOG_RESET();
-
-	return EFI_EXIT(EFI_SUCCESS);
+out:
+	return EFI_EXIT(ret);
 }
 
 /**
@@ -1942,8 +2037,14 @@ out:
  */
 static efi_status_t EFIAPI efi_stall(unsigned long microseconds)
 {
+	u64 end_tick;
+
 	EFI_ENTRY("%ld", microseconds);
-	udelay(microseconds);
+
+	end_tick = get_ticks() + usec_to_tick(microseconds);
+	while (get_ticks() < end_tick)
+		efi_timer_check();
+
 	return EFI_EXIT(EFI_SUCCESS);
 }
 
@@ -2013,7 +2114,6 @@ static efi_status_t EFIAPI efi_close_protocol(efi_handle_t handle,
 		    item->info.controller_handle == controller_handle) {
 			efi_delete_open_info(item);
 			r = EFI_SUCCESS;
-			break;
 		}
 	}
 out:
@@ -2212,29 +2312,58 @@ static efi_status_t EFIAPI efi_locate_protocol(const efi_guid_t *protocol,
 					       void *registration,
 					       void **protocol_interface)
 {
-	struct list_head *lhandle;
+	struct efi_handler *handler;
 	efi_status_t ret;
+	struct efi_object *efiobj;
 
 	EFI_ENTRY("%pUl, %p, %p", protocol, registration, protocol_interface);
 
+	/*
+	 * The UEFI spec explicitly requires a protocol even if a registration
+	 * key is provided. This differs from the logic in LocateHandle().
+	 */
 	if (!protocol || !protocol_interface)
 		return EFI_EXIT(EFI_INVALID_PARAMETER);
 
-	list_for_each(lhandle, &efi_obj_list) {
-		struct efi_object *efiobj;
-		struct efi_handler *handler;
+	if (registration) {
+		struct efi_register_notify_event *event;
+		struct efi_protocol_notification *handle;
 
-		efiobj = list_entry(lhandle, struct efi_object, link);
-
+		event = efi_check_register_notify_event(registration);
+		if (!event)
+			return EFI_EXIT(EFI_INVALID_PARAMETER);
+		/*
+		 * The UEFI spec requires to return EFI_NOT_FOUND if no
+		 * protocol instance matches protocol and registration.
+		 * So let's do the same for a mismatch between protocol and
+		 * registration.
+		 */
+		if (guidcmp(&event->protocol, protocol))
+			goto not_found;
+		if (list_empty(&event->handles))
+			goto not_found;
+		handle = list_first_entry(&event->handles,
+					  struct efi_protocol_notification,
+					  link);
+		efiobj = handle->handle;
+		list_del(&handle->link);
+		free(handle);
 		ret = efi_search_protocol(efiobj, protocol, &handler);
-		if (ret == EFI_SUCCESS) {
-			*protocol_interface = handler->protocol_interface;
-			return EFI_EXIT(EFI_SUCCESS);
+		if (ret == EFI_SUCCESS)
+			goto found;
+	} else {
+		list_for_each_entry(efiobj, &efi_obj_list, link) {
+			ret = efi_search_protocol(efiobj, protocol, &handler);
+			if (ret == EFI_SUCCESS)
+				goto found;
 		}
 	}
+not_found:
 	*protocol_interface = NULL;
-
 	return EFI_EXIT(EFI_NOT_FOUND);
+found:
+	*protocol_interface = handler->protocol_interface;
+	return EFI_EXIT(EFI_SUCCESS);
 }
 
 /**
@@ -2561,34 +2690,50 @@ static efi_status_t efi_protocol_open(
 			if ((attributes & EFI_OPEN_PROTOCOL_BY_DRIVER) &&
 			    (item->info.attributes == attributes))
 				return EFI_ALREADY_STARTED;
+		} else {
+			if (item->info.attributes &
+			    EFI_OPEN_PROTOCOL_BY_DRIVER)
+				opened_by_driver = true;
 		}
 		if (item->info.attributes & EFI_OPEN_PROTOCOL_EXCLUSIVE)
 			opened_exclusive = true;
 	}
 
 	/* Only one controller can open the protocol exclusively */
-	if (opened_exclusive && attributes &
-	    (EFI_OPEN_PROTOCOL_EXCLUSIVE | EFI_OPEN_PROTOCOL_BY_DRIVER))
-		return EFI_ACCESS_DENIED;
+	if (attributes & EFI_OPEN_PROTOCOL_EXCLUSIVE) {
+		if (opened_exclusive)
+			return EFI_ACCESS_DENIED;
+	} else if (attributes & EFI_OPEN_PROTOCOL_BY_DRIVER) {
+		if (opened_exclusive || opened_by_driver)
+			return EFI_ACCESS_DENIED;
+	}
 
 	/* Prepare exclusive opening */
 	if (attributes & EFI_OPEN_PROTOCOL_EXCLUSIVE) {
 		/* Try to disconnect controllers */
+disconnect_next:
+		opened_by_driver = false;
 		list_for_each_entry(item, &handler->open_infos, link) {
+			efi_status_t ret;
+
 			if (item->info.attributes ==
-					EFI_OPEN_PROTOCOL_BY_DRIVER)
-				EFI_CALL(efi_disconnect_controller(
+					EFI_OPEN_PROTOCOL_BY_DRIVER) {
+				ret = EFI_CALL(efi_disconnect_controller(
 						item->info.controller_handle,
 						item->info.agent_handle,
 						NULL));
+				if (ret == EFI_SUCCESS)
+					/*
+					 * Child controllers may have been
+					 * removed from the open_infos list. So
+					 * let's restart the loop.
+					 */
+					goto disconnect_next;
+				else
+					opened_by_driver = true;
+			}
 		}
-		opened_by_driver = false;
-		/* Check if all controllers are disconnected */
-		list_for_each_entry(item, &handler->open_infos, link) {
-			if (item->info.attributes & EFI_OPEN_PROTOCOL_BY_DRIVER)
-				opened_by_driver = true;
-		}
-		/* Only one controller can be connected */
+		/* Only one driver can be connected */
 		if (opened_by_driver)
 			return EFI_ACCESS_DENIED;
 	}
@@ -2596,7 +2741,8 @@ static efi_status_t efi_protocol_open(
 	/* Find existing entry */
 	list_for_each_entry(item, &handler->open_infos, link) {
 		if (item->info.agent_handle == agent_handle &&
-		    item->info.controller_handle == controller_handle)
+		    item->info.controller_handle == controller_handle &&
+		    item->info.attributes == attributes)
 			match = &item->info;
 	}
 	/* None found, create one */
@@ -2720,6 +2866,9 @@ efi_status_t EFIAPI efi_start_image(efi_handle_t image_handle,
 	EFI_ENTRY("%p, %p, %p", image_handle, exit_data_size, exit_data);
 
 	/* Check parameters */
+	if (image_obj->header.type != EFI_OBJECT_TYPE_LOADED_IMAGE)
+		return EFI_EXIT(EFI_INVALID_PARAMETER);
+
 	ret = EFI_CALL(efi_open_protocol(image_handle, &efi_guid_loaded_image,
 					 &info, NULL, NULL,
 					 EFI_OPEN_PROTOCOL_GET_PROTOCOL));
@@ -2780,12 +2929,46 @@ efi_status_t EFIAPI efi_start_image(efi_handle_t image_handle,
  * @image_obj:			handle of the loaded image
  * @loaded_image_protocol:	loaded image protocol
  */
-static void efi_delete_image(struct efi_loaded_image_obj *image_obj,
-			     struct efi_loaded_image *loaded_image_protocol)
+static efi_status_t efi_delete_image
+			(struct efi_loaded_image_obj *image_obj,
+			 struct efi_loaded_image *loaded_image_protocol)
 {
+	struct efi_object *efiobj;
+	efi_status_t r, ret = EFI_SUCCESS;
+
+close_next:
+	list_for_each_entry(efiobj, &efi_obj_list, link) {
+		struct efi_handler *protocol;
+
+		list_for_each_entry(protocol, &efiobj->protocols, link) {
+			struct efi_open_protocol_info_item *info;
+
+			list_for_each_entry(info, &protocol->open_infos, link) {
+				if (info->info.agent_handle !=
+				    (efi_handle_t)image_obj)
+					continue;
+				r = EFI_CALL(efi_close_protocol
+						(efiobj, protocol->guid,
+						 info->info.agent_handle,
+						 info->info.controller_handle
+						));
+				if (r !=  EFI_SUCCESS)
+					ret = r;
+				/*
+				 * Closing protocols may results in further
+				 * items being deleted. To play it safe loop
+				 * over all elements again.
+				 */
+				goto close_next;
+			}
+		}
+	}
+
 	efi_free_pages((uintptr_t)loaded_image_protocol->image_base,
 		       efi_size_in_pages(loaded_image_protocol->image_size));
 	efi_delete_handle(&image_obj->header);
+
+	return ret;
 }
 
 /**
@@ -2985,7 +3168,7 @@ static efi_status_t EFIAPI efi_handle_protocol(efi_handle_t handle,
 					       const efi_guid_t *protocol,
 					       void **protocol_interface)
 {
-	return efi_open_protocol(handle, protocol, protocol_interface, NULL,
+	return efi_open_protocol(handle, protocol, protocol_interface, efi_root,
 				 NULL, EFI_OPEN_PROTOCOL_BY_HANDLE_PROTOCOL);
 }
 
