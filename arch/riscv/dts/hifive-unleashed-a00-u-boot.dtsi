@@ -90,12 +90,6 @@
 			reg = <0x0 0x18000000 0x0 0x8000000>;
 			reg-names = "mem";
 		};
-		&eth0 {
-			phy1: ethernet-phy@0 {
-				reg = <0>;
-				reset-gpios = <&L31 12 1>;
-			};
-		};
 		L31: gpio@10060000 {
 			compatible = "sifive,gpio0";
 			interrupt-parent = <&plic0>;

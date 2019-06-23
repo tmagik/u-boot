@@ -53,19 +53,22 @@ extern uint32_t DENALI_CTL_DATA[256];
 extern uint32_t DENALI_PHY_DATA[1215];
 
 // static void setup_fu540_clocks(void);
-
+#if 1
 int arch_cpu_init(void)
 {
+	/* this runs very early so printf is not up yet */
+	//printf("fu540 legacy arch_cpu_init -> enter\n");
 	g_aloe_prci->COREPLLCFG0 = 0x02110EC0u; /* Take PLL out of bypass */
 	while((g_aloe_prci->COREPLLCFG0 & 0x80000000u) == 0); /* Wait for lock with PLL bypassed */
 
 	g_aloe_prci->COREPLLOUT  = 0x80000000u;
 	g_aloe_prci->CORECLKSEL  = 0x00000000u; /* Switch to PLL as clock source */
 
-	g_aloe_prci->DDRPLLCFG0 = 0x2110DC0u;
+	//printf("fu540 legacy arch_cpu_init <- exit\n");
 
 	return(0);
 }
+#endif
 
 int dram_init(void)
 {
@@ -76,6 +79,8 @@ int dram_init(void)
 
 	printf("Running legacy HiFive Unleashed DRAM init\n");
 
+	/* DDR pll init */
+	g_aloe_prci->DDRPLLCFG0 = 0x2110DC0u;
 	while((g_aloe_prci->DDRPLLCFG0 & 0x80000000u) == 0); /* Wait for lock with PLL bypassed */
 
 	g_aloe_prci->DDRPLLCFG1 = 0x80000000u;
@@ -134,6 +139,7 @@ int dram_init(void)
 	/*                ^^ RWX + TOR */
 	ddr_phy_fixup();
 
+#if 1	/* without this the first access to gemgxl hangs the bus */
 	g_aloe_prci->GEMGXLPLLCFG0 = 0x03128EC0u; /* Configure Core Clock PLL */
 	while(g_aloe_prci->GEMGXLPLLCFG0 & 0x80000000u) /* Wait for lock with PLL bypassed */
 	ix++;
@@ -142,6 +148,7 @@ int dram_init(void)
 	g_aloe_prci->GEMGXLPLLCFG1  = 0x80000000u; /* Switch to PLL as clock source */
 	g_aloe_prci->DEVICERESETREG |= 0x00000020u; /* Release MAC from reset */
 	g_aloe_prci->PROCMONCFG = 0x1 << 24u;
+#endif
 
 	#warning "get this from device tree!! "
 	gd->ram_size = 0x200000000;

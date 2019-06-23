@@ -70,5 +70,6 @@
 	phy-handle = <&phy1>;
 	phy1: ethernet-phy@0 {
 		reg = <0>;
+		reset-gpios = <&L31 12 1>;
 	};
 };

@@ -128,8 +128,13 @@ static u32 fu540_read_serialnum(void)
 			printf("%s: error reading from OTP\n", __func__);
 			break;
 		}
-		if (serial[0] == ~serial[1])
+		if (serial[0] == ~serial[1]){
+			printf("Board serial #%d\n", serial[0]);
 			return serial[0];
+		} else {
+			printf("%s: error, serial number corrupted in otp, 0x%x	0x%x\n",
+				serial[0], ~serial[1]);
+		}
 	}
 
 	return 0;
@@ -157,6 +162,7 @@ static void fu540_setup_macaddr(u32 serialnum)
 
 int misc_init_r(void)
 {
+
 	/* Set ethaddr environment variable if not set */
 	if (!env_get("ethaddr"))
 		fu540_setup_macaddr(fu540_read_serialnum());
@@ -177,6 +183,7 @@ void reset_phy(void)
 {
     volatile uint32_t loop;
 
+    printf("  enter reset_phy..");
 /*
  * Init includes toggling the reset line which is connected to GPIO 0 pin 12.
  * This is the only pin I can see on the 16 GPIO which is currently set as an.
@@ -208,11 +215,11 @@ void reset_phy(void)
     g_aloe_gpio->OUTPUT_VAL  |= 0x00001000ul; /* Out of reset once more */
 
     /* Need at least 15mS delay before accessing PHY after reset... */
-    for(loop = 0; loop != 10000; loop++)     /* Long delay, I'm not sure how much is needed... */
+    for(loop = 0; loop != 100000; loop++)     /* Long delay, I'm not sure how much is needed... */
     {
 	;
     }
-
+    printf(" exit reset_phy\n");
 }
 
 
