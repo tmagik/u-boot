@@ -930,6 +930,8 @@ static u32 macb_mdc_clk_div(int id, struct macb_device *macb)
 	else
 		config = MACB_BF(CLK, MACB_CLK_DIV64);
 
+	printf("macb_mdc_clk_div config 0x%x\n", config);
+
 	return config;
 }
 
@@ -959,6 +961,8 @@ static u32 gem_mdc_clk_div(int id, struct macb_device *macb)
 		config = GEM_BF(CLK, GEM_CLK_DIV128);
 	else
 		config = GEM_BF(CLK, GEM_CLK_DIV224);
+
+	printf("gem_mdc_clk_div config 0x%x\n", config);
 
 	return config;
 }

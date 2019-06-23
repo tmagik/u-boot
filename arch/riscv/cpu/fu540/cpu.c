@@ -154,6 +154,8 @@ int dram_init(void)
 	gd->ram_size = 0x200000000;
 
 #else
+	#warning "get this from device tree!! "
+	gd->ram_size = 0x200000000;
 	printf("dram_init: nothing to do?\n");
 #endif
 
