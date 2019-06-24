@@ -17,6 +17,11 @@
 #include <linux/delay.h>
 #include <linux/io.h>
 
+#if defined(CONFIG_SIFIVE_LEGACY_MEMORY_INIT)
+/* Define the DDR register into */
+#include "ddrregs.h"
+#endif
+
 #ifdef CONFIG_MISC_INIT_R
 
 #define FU540_OTP_BASE_ADDR			0x10070000

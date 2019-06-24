@@ -151,11 +151,14 @@ int dram_init(void)
 #endif
 
 	#warning "get this from device tree!! "
-	gd->ram_size = 0x200000000;
+	#warning "fix macb to handle 64 bit"
+	//gd->ram_size = 0x200000000;
+	gd->ram_size = 0x080000000;
 
 #else
 	#warning "get this from device tree!! "
-	gd->ram_size = 0x200000000;
+	//gd->ram_size = 0x200000000;
+	gd->ram_size = 0x080000000;
 	printf("dram_init: nothing to do?\n");
 #endif
 
