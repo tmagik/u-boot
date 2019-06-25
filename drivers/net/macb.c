@@ -84,6 +84,8 @@ struct macb_dma_desc {
 struct macb_device {
 	void			*regs;
 
+	bool			is_big_endian;
+
 	const struct macb_config*config;
 
 	unsigned int		rx_tail;
@@ -743,11 +745,10 @@ static void gmac_configure_dma(struct macb_device *macb)
 	dmacfg |= GEM_BIT(TXPBMS) | GEM_BF(RXBMS, -1L);
 	dmacfg &= ~GEM_BIT(ENDIA_PKT);
 
-#ifdef CONFIG_SYS_LITTLE_ENDIAN
-		dmacfg &= ~GEM_BIT(ENDIA_DESC);
-#else
+	if (macb->is_big_endian)
 		dmacfg |= GEM_BIT(ENDIA_DESC); /* CPU in big endian */
-#endif
+	else
+		dmacfg &= ~GEM_BIT(ENDIA_DESC);
 
 	dmacfg &= ~GEM_BIT(ADDR64);
 	gem_writel(macb, DMACFG, dmacfg);
@@ -1220,6 +1221,9 @@ static int macb_eth_probe(struct udevice *dev)
 	}
 
 	macb->regs = (void *)pdata->iobase;
+
+	macb->is_big_endian = (cpu_to_be32(0x12345678) == 0x12345678) ?
+				true : false;
 
 	macb->config = (struct macb_config *)dev_get_driver_data(dev);
 	if (!macb->config)
