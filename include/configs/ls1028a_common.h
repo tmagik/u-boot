@@ -164,7 +164,6 @@
 
 /*  MMC  */
 #ifdef CONFIG_MMC
-#define CONFIG_FSL_ESDHC
 #define CONFIG_SYS_FSL_MMC_HAS_CAPBLT_VS33
 #endif
 
@@ -178,12 +177,6 @@
 
 #define CONFIG_SYS_MONITOR_BASE CONFIG_SYS_TEXT_BASE
 
-/*  MMC  */
-#ifdef CONFIG_MMC
-#define CONFIG_FSL_ESDHC
-#define CONFIG_SYS_FSL_MMC_HAS_CAPBLT_VS33
-#endif
-
 /* I2C bus multiplexer */
 #define I2C_MUX_PCA_ADDR_PRI            0x77 /* Primary Mux*/
 #define I2C_MUX_CH_DEFAULT              0x8
@@ -196,5 +189,9 @@
 #define CONFIG_SYS_I2C_EEPROM_ADDR_LEN		1
 #define CONFIG_SYS_EEPROM_PAGE_WRITE_BITS	3
 #define CONFIG_SYS_EEPROM_PAGE_WRITE_DELAY_MS	5
+
+#ifdef CONFIG_SECURE_BOOT
+#include <asm/fsl_secure_boot.h>
+#endif
 
 #endif /* __L1028A_COMMON_H */
