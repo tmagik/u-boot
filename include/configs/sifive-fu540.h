@@ -37,9 +37,6 @@
 #define BOOT_TARGET_DEVICES(func) \
 	func(DHCP, dhcp, na)
 
-/* Is this the right place to put this? */
-#define CONFIG_MMC_SPI 
-
 
 #if 0
 /* Someday I will understand config_distro_bootcmd. Today is not that day */
