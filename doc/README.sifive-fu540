@@ -32,8 +32,10 @@ Building
 
 Flashing
 ========
-The current U-Boot port is supported in S-mode only and loaded directly
-into DRAM.
+The current U-Boot port is supported in upstream U-boot in S-mode,
+with M-mode support currently in development/testing.
+See https://github.com/sifive/u-boot and
+https://github.com/sifive/freedom-u-sdk for the latest versions.
 
 A prior stage (M-mode) firmware/bootloader (e.g OpenSBI) is required to
 boot the u-boot.bin in S-mode and provide M-mode runtime services.
