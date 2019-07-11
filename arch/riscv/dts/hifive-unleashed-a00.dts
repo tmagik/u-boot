@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: (GPL-2.0 OR MIT)
 /* Copyright (c) 2018-2019 SiFive, Inc */
 
-/dts-v1/;
-
 #include "fu540-c000.dtsi"
 
 /* Clock frequency (in Hz) of the PCB crystal for rtcclk */
@@ -63,5 +61,15 @@
 		spi-max-frequency = <20000000>;
 		voltage-ranges = <3300 3300>;
 		disable-wp;
+	};
+};
+
+&eth0 {
+	status = "okay";
+	phy-mode = "gmii";
+	phy-handle = <&phy1>;
+	phy1: ethernet-phy@0 {
+		reg = <0>;
+		reset-gpios = <&L31 12 1>;
 	};
 };

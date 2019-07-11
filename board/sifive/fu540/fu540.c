@@ -14,33 +14,13 @@
 
 #include <common.h>
 #include <dm.h>
-#include "ddrregs.h"
-
-struct hifive_gpio_regs
-{
-    volatile uint32_t  INPUT_VAL;   /* 0x0000 */
-    volatile uint32_t  INPUT_EN;    /* 0x0004 */
-    volatile uint32_t  OUTPUT_VAL;  /* 0x0008 */
-    volatile uint32_t  OUTPUT_EN;   /* 0x000C */
-    volatile uint32_t  PUE;	    /* 0x0010 */
-    volatile uint32_t  DS;	    /* 0x0014 */
-    volatile uint32_t  RISE_IE;     /* 0x0018 */
-    volatile uint32_t  RISE_IP;     /* 0x001C */
-    volatile uint32_t  FALL_IE;     /* 0x0020 */
-    volatile uint32_t  FALL_IP;     /* 0x0024 */
-    volatile uint32_t  HIGH_IE;     /* 0x0028 */
-    volatile uint32_t  HIGH_IP;     /* 0x002C */
-    volatile uint32_t  LOW_IE;	    /* 0x0030 */
-    volatile uint32_t  LOW_IP;	    /* 0x0034 */
-    volatile uint32_t  reserved0;   /* 0x0038 */
-    volatile uint32_t  reserved1;   /* 0x003C */
-    volatile uint32_t  OUT_XOR;     /* 0x0040 */
-};
-
-struct hifive_gpio_regs *g_aloe_gpio = (struct hifive_gpio_regs *)HIFIVE_BASE_GPIO;
-
 #include <linux/delay.h>
 #include <linux/io.h>
+
+#if defined(CONFIG_SIFIVE_LEGACY_MEMORY_INIT)
+/* Define the DDR register into */
+#include "ddrregs.h"
+#endif
 
 #ifdef CONFIG_MISC_INIT_R
 
@@ -124,8 +104,13 @@ static u32 fu540_read_serialnum(void)
 			printf("%s: error reading from OTP\n", __func__);
 			break;
 		}
-		if (serial[0] == ~serial[1])
+		if (serial[0] == ~serial[1]){
+			printf("Board serial #%d\n", serial[0]);
 			return serial[0];
+		} else {
+			printf("%s: error, serial number corrupted in otp, 0x%x	0x%x\n",
+				serial[0], ~serial[1]);
+		}
 	}
 
 	return 0;
@@ -153,6 +138,7 @@ static void fu540_setup_macaddr(u32 serialnum)
 
 int misc_init_r(void)
 {
+
 	/* Set ethaddr environment variable if not set */
 	if (!env_get("ethaddr"))
 		fu540_setup_macaddr(fu540_read_serialnum());
@@ -169,10 +155,36 @@ int board_init(void)
 	return 0;
 }
 
+#define SIFIVE_RESET_PHY_LEGACY
+#if defined(SIFIVE_RESET_PHY_LEGACY)
+
+struct hifive_gpio_regs
+{
+    volatile uint32_t  INPUT_VAL;   /* 0x0000 */
+    volatile uint32_t  INPUT_EN;    /* 0x0004 */
+    volatile uint32_t  OUTPUT_VAL;  /* 0x0008 */
+    volatile uint32_t  OUTPUT_EN;   /* 0x000C */
+    volatile uint32_t  PUE;	    /* 0x0010 */
+    volatile uint32_t  DS;	    /* 0x0014 */
+    volatile uint32_t  RISE_IE;     /* 0x0018 */
+    volatile uint32_t  RISE_IP;     /* 0x001C */
+    volatile uint32_t  FALL_IE;     /* 0x0020 */
+    volatile uint32_t  FALL_IP;     /* 0x0024 */
+    volatile uint32_t  HIGH_IE;     /* 0x0028 */
+    volatile uint32_t  HIGH_IP;     /* 0x002C */
+    volatile uint32_t  LOW_IE;	    /* 0x0030 */
+    volatile uint32_t  LOW_IP;	    /* 0x0034 */
+    volatile uint32_t  reserved0;   /* 0x0038 */
+    volatile uint32_t  reserved1;   /* 0x003C */
+    volatile uint32_t  OUT_XOR;     /* 0x0040 */
+};
+
+struct hifive_gpio_regs *g_aloe_gpio = (struct hifive_gpio_regs *)HIFIVE_BASE_GPIO;
+
 void reset_phy(void)
 {
-    volatile uint32_t loop;
 
+    printf("  enter reset_phy..");
 /*
  * Init includes toggling the reset line which is connected to GPIO 0 pin 12.
  * This is the only pin I can see on the 16 GPIO which is currently set as an.
@@ -187,26 +199,17 @@ void reset_phy(void)
  */
     g_aloe_gpio->OUTPUT_EN  |= 0x00001000ul;  /* Configure pin 12 as an output */
     g_aloe_gpio->OUTPUT_VAL &= 0x0000EFFFul;  /* Clear pin 12 to reset PHY */
-    for(loop = 0; loop != 1000; loop++)     /* Short delay, I'm not sure how much is needed... */
-    {
-	;
-    }
+    udelay(10);
+    
     g_aloe_gpio->OUTPUT_VAL  |= 0x00001000ul; /* Take PHY^ out of reset */
-    for(loop = 0; loop != 1000; loop++)     /* Short delay, I'm not sure how much is needed... */
-    {
-	;
-    }
+    udelay(10);
+
     g_aloe_gpio->OUTPUT_VAL &= 0x0000EFFFul;  /* Second reset pulse */
-    for(loop = 0; loop != 1000; loop++)     /* Short delay, I'm not sure how much is needed... */
-    {
-	;
-    }
+    udelay(10);
     g_aloe_gpio->OUTPUT_VAL  |= 0x00001000ul; /* Out of reset once more */
 
     /* Need at least 15mS delay before accessing PHY after reset... */
-    for(loop = 0; loop != 10000; loop++)     /* Long delay, I'm not sure how much is needed... */
-    {
-	;
-    }
-
+    udelay(15);
+    printf(" exit reset_phy\n");
 }
+#endif

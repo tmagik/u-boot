@@ -346,7 +346,7 @@ static int _macb_send(struct macb_device *macb, const char *name, void *packet,
 		if (ctrl & MACB_BIT(TX_BUF_EXHAUSTED))
 			printf("%s: TX buffers exhausted in mid frame\n", name);
 	} else {
-		printf("%s: TX timeout paddr %p tx_head %x\n", name, paddr, tx_head);
+		printf("%s: TX timeout\n", name);
 	}
 
 	/* No one cares anyway */
@@ -1187,19 +1187,14 @@ static int macb_enable_clk(struct udevice *dev)
 	 * don't fail for ret == -ENOSYS.
 	 */
 	ret = clk_enable(&clk);
-	if (ret && ret != -ENOSYS){
-		printf("%s: Could not find clk index 0\n", __func__);
+	if (ret && ret != -ENOSYS)
 		return ret;
-	}
 
 	clk_rate = clk_get_rate(&clk);
-	if (!clk_rate){
-		printf("%s: Error getting clk index 0 rate0\n", __func__);
+	if (!clk_rate)
 		return -EINVAL;
-	}
 
 	macb->pclk_rate = clk_rate;
-	printf("%s: macb->pclk_rate is 0x%d\n", __func__, clk_rate);
 
 	return 0;
 }
