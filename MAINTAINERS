@@ -297,10 +297,12 @@ ARM STM STM32MP
 M:	Patrick Delaunay <patrick.delaunay@st.com>
 M:	Patrice Chotard <patrice.chotard@st.com>
 L:	uboot-stm32@st-md-mailman.stormreply.com (moderated for non-subscribers)
+T:	git https://gitlab.denx.de/u-boot/custodians/u-boot-stm
 S:	Maintained
 F:	arch/arm/mach-stm32mp/
 F:	drivers/clk/clk_stm32mp1.c
 F:	drivers/i2c/stm32f7_i2c.c
+F:	drivers/mailbox/stm32-ipcc.c
 F:	drivers/misc/stm32mp_fuse.c
 F:	drivers/mmc/stm32_sdmmc2.c
 F:	drivers/phy/phy-stm32-usbphyc.c
@@ -632,6 +634,12 @@ PATMAN
 M:	Simon Glass <sjg@chromium.org>
 S:	Maintained
 F:	tools/patman/
+
+PCI Endpoint
+M:	Ramon Fried <rfried.dev@gmail.com>
+S:	Maintained
+F:	drivers/pci_endpoint/
+F:  include/pci_ep.h
 
 POWER
 M:	Jaehoon Chung <jh80.chung@samsung.com>
