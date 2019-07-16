@@ -761,6 +761,8 @@ static int jump_to_copy(void)
 	arch_setup_gd(gd->new_gd);
 	board_init_f_r_trampoline(gd->start_addr_sp);
 #else
+	printf("Relocating, use 'add-symbol-file u-boot 0x%x' in gdb\n",
+		gd->relocaddr);
 	relocate_code(gd->start_addr_sp, gd->new_gd, gd->relocaddr);
 #endif
 
