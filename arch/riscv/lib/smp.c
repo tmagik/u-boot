@@ -73,6 +73,14 @@ static int send_ipi_many(struct ipi_data *ipi)
 		gd->arch.ipi[reg].arg0 = ipi->arg0;
 		gd->arch.ipi[reg].arg1 = ipi->arg1;
 
+#if 1
+		//udelay(1000);
+//		printf("ipi: %d\n", reg);
+		int64_t a, b;
+		for (int64_t i=0; i < 100000000; i++){
+			asm volatile("nop");
+		}
+#endif
 		ret = riscv_send_ipi(reg);
 		if (ret) {
 			pr_err("Cannot send IPI to hart %d\n", reg);
@@ -102,6 +110,8 @@ void handle_ipi(ulong hart)
 	smp_function = (void (*)(ulong, ulong, ulong))gd->arch.ipi[hart].addr;
 	invalidate_icache_all();
 
+	printf("handle_ipi func(0x%x)(a0: %d, a1: 0x%x)\n",
+		gd->arch.ipi[hart].addr, hart, gd->arch.ipi[hart].arg0);
 	smp_function(hart, gd->arch.ipi[hart].arg0, gd->arch.ipi[hart].arg1);
 }
 
@@ -109,6 +119,8 @@ int smp_call_function(ulong addr, ulong arg0, ulong arg1)
 {
 	int ret = 0;
 	struct ipi_data ipi;
+
+	printf("smp_call_function(0x%x, 0x%x, 0x%x)\n", addr, arg0, arg1);
 
 	ipi.addr = addr;
 	ipi.arg0 = arg0;
