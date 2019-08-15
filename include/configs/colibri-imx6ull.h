@@ -123,7 +123,7 @@
 		"${board}/flash_blk.img && source ${loadaddr}\0" \
 	"splashpos=m,m\0" \
 	"videomode=video=ctfb:x:640,y:480,depth:18,pclk:39722,le:48,ri:16,up:33,lo:10,hs:96,vs:2,sync:0,vmode:0\0" \
-	"vidargs=video=mxsfb:640x480-16@60"
+	"vidargs=video=mxsfb:640x480M-16@60"
 
 #define CONFIG_SYS_MEMTEST_START	0x80000000
 #define CONFIG_SYS_MEMTEST_END		(CONFIG_SYS_MEMTEST_START + 0x08000000)
@@ -170,7 +170,7 @@
 #define CONFIG_SYS_DFU_DATA_BUF_SIZE	SZ_16M
 #define DFU_DEFAULT_POLL_TIMEOUT	300
 
-#ifdef CONFIG_VIDEO
+#if defined(CONFIG_VIDEO) || defined(CONFIG_DM_VIDEO)
 #define CONFIG_VIDEO_MXS
 #define MXS_LCDIF_BASE MX6UL_LCDIF1_BASE_ADDR
 #define CONFIG_VIDEO_LOGO

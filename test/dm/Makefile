@@ -17,7 +17,7 @@ obj-$(CONFIG_SOUND) += audio.o
 obj-$(CONFIG_BLK) += blk.o
 obj-$(CONFIG_BOARD) += board.o
 obj-$(CONFIG_DM_BOOTCOUNT) += bootcount.o
-obj-$(CONFIG_CLK) += clk.o
+obj-$(CONFIG_CLK) += clk.o clk_ccf.o
 obj-$(CONFIG_DM_ETH) += eth.o
 obj-$(CONFIG_FIRMWARE) += firmware.o
 obj-$(CONFIG_DM_GPIO) += gpio.o
@@ -62,4 +62,6 @@ obj-$(CONFIG_SOUND) += sound.o
 obj-$(CONFIG_TEE) += tee.o
 obj-$(CONFIG_VIRTIO_SANDBOX) += virtio.o
 obj-$(CONFIG_DMA) += dma.o
+obj-$(CONFIG_DM_MDIO) += mdio.o
+obj-$(CONFIG_DM_MDIO_MUX) += mdio_mux.o
 endif

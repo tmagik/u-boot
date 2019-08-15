@@ -145,6 +145,19 @@ int dev_read_size(struct udevice *dev, const char *propname);
 fdt_addr_t dev_read_addr_index(struct udevice *dev, int index);
 
 /**
+ * dev_read_addr_size_index() - Get the indexed reg property of a device
+ *
+ * @dev: Device to read from
+ * @index: the 'reg' property can hold a list of <addr, size> pairs
+ *	   and @index is used to select which one is required
+ * @size: place to put size value (on success)
+ *
+ * @return address or FDT_ADDR_T_NONE if not found
+ */
+fdt_addr_t dev_read_addr_size_index(struct udevice *dev, int index,
+				    fdt_size_t *size);
+
+/**
  * dev_remap_addr_index() - Get the indexed reg property of a device
  *                               as a memory-mapped I/O pointer
  *
@@ -167,6 +180,20 @@ void *dev_remap_addr_index(struct udevice *dev, int index);
  * @return address or FDT_ADDR_T_NONE if not found
  */
 fdt_addr_t dev_read_addr_name(struct udevice *dev, const char* name);
+
+/**
+ * dev_read_addr_size_name() - Get the reg property of a device, indexed by name
+ *
+ * @dev: Device to read from
+ * @name: the 'reg' property can hold a list of <addr, size> pairs, with the
+ *	  'reg-names' property providing named-based identification. @index
+ *	  indicates the value to search for in 'reg-names'.
+ *  @size: place to put size value (on success)
+ *
+ * @return address or FDT_ADDR_T_NONE if not found
+ */
+fdt_addr_t dev_read_addr_size_name(struct udevice *dev, const char *name,
+				   fdt_size_t *size);
 
 /**
  * dev_remap_addr_name() - Get the reg property of a device, indexed by name,
@@ -227,7 +254,7 @@ fdt_addr_t dev_read_addr_size(struct udevice *dev, const char *propname,
 /**
  * dev_read_name() - get the name of a device's node
  *
- * @node: valid node to look up
+ * @dev: Device to read from
  * @return name of node
  */
 const char *dev_read_name(struct udevice *dev);
@@ -499,7 +526,7 @@ int dev_read_resource_byname(struct udevice *dev, const char *name,
 			     struct resource *res);
 
 /**
- * dev_translate_address() - Tranlate a device-tree address
+ * dev_translate_address() - Translate a device-tree address
  *
  * Translate an address from the device-tree into a CPU physical address.  This
  * function walks up the tree and applies the various bus mappings along the
@@ -510,6 +537,19 @@ int dev_read_resource_byname(struct udevice *dev, const char *name,
  * @return the translated address; OF_BAD_ADDR on error
  */
 u64 dev_translate_address(struct udevice *dev, const fdt32_t *in_addr);
+
+/**
+ * dev_translate_dma_address() - Translate a device-tree DMA address
+ *
+ * Translate a DMA address from the device-tree into a CPU physical address.
+ * This function walks up the tree and applies the various bus mappings along
+ * the way.
+ *
+ * @dev: device giving the context in which to translate the DMA address
+ * @in_addr: pointer to the DMA address to translate
+ * @return the translated DMA address; OF_BAD_ADDR on error
+ */
+u64 dev_translate_dma_address(struct udevice *dev, const fdt32_t *in_addr);
 
 /**
  * dev_read_alias_highest_id - Get highest alias id for the given stem
@@ -588,10 +628,24 @@ static inline fdt_addr_t dev_read_addr_index(struct udevice *dev, int index)
 	return devfdt_get_addr_index(dev, index);
 }
 
+static inline fdt_addr_t dev_read_addr_size_index(struct udevice *dev,
+						  int index,
+						  fdt_size_t *size)
+{
+	return devfdt_get_addr_size_index(dev, index, size);
+}
+
 static inline fdt_addr_t dev_read_addr_name(struct udevice *dev,
 					    const char *name)
 {
 	return devfdt_get_addr_name(dev, name);
+}
+
+static inline fdt_addr_t dev_read_addr_size_name(struct udevice *dev,
+						 const char *name,
+						 fdt_size_t *size)
+{
+	return devfdt_get_addr_size_name(dev, name, size);
 }
 
 static inline fdt_addr_t dev_read_addr(struct udevice *dev)
@@ -749,6 +803,11 @@ static inline int dev_read_resource_byname(struct udevice *dev,
 static inline u64 dev_translate_address(struct udevice *dev, const fdt32_t *in_addr)
 {
 	return ofnode_translate_address(dev_ofnode(dev), in_addr);
+}
+
+static inline u64 dev_translate_dma_address(struct udevice *dev, const fdt32_t *in_addr)
+{
+	return ofnode_translate_dma_address(dev_ofnode(dev), in_addr);
 }
 
 static inline int dev_read_alias_highest_id(const char *stem)

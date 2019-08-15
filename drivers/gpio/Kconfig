@@ -14,7 +14,7 @@ config DM_GPIO
 	  particular GPIOs that they provide. The uclass interface
 	  is defined in include/asm-generic/gpio.h.
 
-config DM_GPIO_HOG
+config GPIO_HOG
 	bool "Enable GPIO hog support"
 	depends on DM_GPIO
 	default n
@@ -214,6 +214,12 @@ config SANDBOX_GPIO_COUNT
 	  are specified using the device tree. But you can also have a number
 	  of 'anonymous' GPIOs that do not belong to any device or bank.
 	  Select a suitable value depending on your needs.
+
+config SUNXI_GPIO
+	bool "Allwinner GPIO driver"
+	depends on ARCH_SUNXI
+	help
+	  Support the GPIO device in Allwinner SoCs.
 
 config XILINX_GPIO
 	bool "Xilinx GPIO driver"

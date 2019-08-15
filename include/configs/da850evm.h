@@ -19,14 +19,6 @@
 #endif
 
 /*
-* Disable DM_* for SPL build and can be re-enabled after adding
-* DM support in SPL
-*/
-#ifdef CONFIG_SPL_BUILD
-#undef CONFIG_DM_I2C
-#undef CONFIG_DM_I2C_COMPAT
-#endif
-/*
  * SoC Configuration
  */
 #define CONFIG_SYS_EXCEPTION_VECTORS_HIGH
@@ -34,7 +26,7 @@
 #define CONFIG_SYS_OSCIN_FREQ		24000000
 #define CONFIG_SYS_TIMERBASE		DAVINCI_TIMER0_BASE
 #define CONFIG_SYS_HZ_CLOCK		clk_get(DAVINCI_AUXCLK_CLKID)
-#define CONFIG_SKIP_LOWLEVEL_INIT
+#define CONFIG_SKIP_LOWLEVEL_INIT_ONLY
 
 #ifdef CONFIG_DIRECT_NOR_BOOT
 #define CONFIG_ARCH_CPU_INIT
@@ -182,6 +174,10 @@
 #define CONFIG_SPL_NAND_DRIVERS
 #define CONFIG_SPL_NAND_ECC
 #define CONFIG_SPL_NAND_LOAD
+
+#ifndef CONFIG_SPL_BUILD
+#define CONFIG_SYS_NAND_SELF_INIT
+#endif
 #endif
 
 /*
@@ -196,7 +192,7 @@
 #ifdef CONFIG_USE_NOR
 #define CONFIG_SYS_MAX_FLASH_BANKS	1 /* max number of flash banks */
 #define CONFIG_SYS_FLASH_SECT_SZ	(128 << 10) /* 128KB */
-#define CONFIG_ENV_OFFSET		(CONFIG_SYS_FLASH_SECT_SZ * 3)
+#define CONFIG_ENV_OFFSET		(SZ_1M)
 #define CONFIG_ENV_SIZE			(10 << 10) /* 10KB */
 #define CONFIG_SYS_FLASH_BASE		DAVINCI_ASYNC_EMIF_DATA_CE2_BASE
 #define PHYS_FLASH_SIZE			(8 << 20) /* Flash size 8MB */
@@ -268,12 +264,8 @@
 #endif
 
 /* USB Configs */
-#define CONFIG_SYS_USB_OHCI_CPU_INIT
 #define CONFIG_USB_OHCI_NEW
-#define CONFIG_USB_STORAGE
-#define CONFIG_SYS_USB_OHCI_REGS_BASE		0x01E25000
 #define CONFIG_SYS_USB_OHCI_MAX_ROOT_PORTS	15
-#define CONFIG_SYS_USB_OHCI_SLOT_NAME		"da850evm"
 
 #ifndef CONFIG_DIRECT_NOR_BOOT
 /* defines for SPL */

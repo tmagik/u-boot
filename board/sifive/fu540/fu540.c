@@ -138,7 +138,6 @@ static void fu540_setup_macaddr(u32 serialnum)
 
 int misc_init_r(void)
 {
-
 	/* Set ethaddr environment variable if not set */
 	if (!env_get("ethaddr"))
 		fu540_setup_macaddr(fu540_read_serialnum());

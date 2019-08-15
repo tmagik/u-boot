@@ -10,7 +10,6 @@
 #include <common.h>
 #include <config.h>
 #include <dm.h>
-#include <environment.h>
 #include <command.h>
 #include <watchdog.h>
 #include <asm/cache.h>

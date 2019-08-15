@@ -24,6 +24,7 @@ config USB_XHCI_DWC3
 config USB_XHCI_DWC3_OF_SIMPLE
 	bool "DesignWare USB3 DRD Generic OF Simple Glue Layer"
 	depends on DM_USB
+	default y if ARCH_ROCKCHIP
 	default y if DRA7XX
 	help
 	  Support USB2/3 functionality in simple SoC integrations with
@@ -234,6 +235,13 @@ config USB_OHCI_HCD
 	  controller doesn't use PCI, this is probably appropriate.  For a PCI
 	  based system where you're not sure, the "lspci -v" entry will list the
 	  right "prog-if" for your USB controller(s):  EHCI, OHCI, or UHCI.
+
+config USB_OHCI_PCI
+	bool "Support for PCI-based OHCI USB controller"
+	depends on DM_USB
+	default n
+	help
+	  Enables support for the PCI-based OHCI controller.
 
 if USB_OHCI_HCD
 

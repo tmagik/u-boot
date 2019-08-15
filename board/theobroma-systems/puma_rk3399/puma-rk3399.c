@@ -5,7 +5,7 @@
 
 #include <common.h>
 #include <dm.h>
-#include <environment.h>
+#include <env.h>
 #include <misc.h>
 #include <spl.h>
 #include <syscon.h>
@@ -20,21 +20,6 @@
 #include <asm/arch-rockchip/periph.h>
 #include <power/regulator.h>
 #include <u-boot/sha256.h>
-
-int board_init(void)
-{
-	int ret;
-
-	/*
-	 * We need to call into regulators_enable_boot_on() again, as the call
-	 * during SPL may have not included all regulators.
-	 */
-	ret = regulators_enable_boot_on(false);
-	if (ret)
-		debug("%s: Cannot enable boot on regulator\n", __func__);
-
-	return 0;
-}
 
 static void setup_macaddr(void)
 {

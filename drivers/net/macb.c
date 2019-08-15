@@ -45,10 +45,17 @@
 
 DECLARE_GLOBAL_DATA_PTR;
 
-#define MACB_RX_BUFFER_SIZE		4096
-#define MACB_RX_RING_SIZE		(MACB_RX_BUFFER_SIZE / 128)
+/*
+ * These buffer sizes must be power of 2 and divisible
+ * by RX_BUFFER_MULTIPLE
+ */
+#define MACB_RX_BUFFER_SIZE		128
+#define GEM_RX_BUFFER_SIZE		2048
 #define RX_BUFFER_MULTIPLE		64
+
+#define MACB_RX_RING_SIZE		32
 #define MACB_TX_RING_SIZE		16
+
 #define MACB_TX_TIMEOUT		1000
 #define MACB_AUTONEG_TIMEOUT	5000000
 
@@ -86,7 +93,7 @@ struct macb_device {
 
 	bool			is_big_endian;
 
-	const struct macb_config*config;
+	const struct macb_config *config;
 
 	unsigned int		rx_tail;
 	unsigned int		tx_head;
@@ -98,6 +105,7 @@ struct macb_device {
 	void			*tx_buffer;
 	struct macb_dma_desc	*rx_ring;
 	struct macb_dma_desc	*tx_ring;
+	size_t			rx_buffer_size;
 
 	unsigned long		rx_buffer_dma;
 	unsigned long		rx_ring_dma;
@@ -400,15 +408,16 @@ static int _macb_recv(struct macb_device *macb, uchar **packetp)
 		}
 
 		if (status & MACB_BIT(RX_EOF)) {
-			buffer = macb->rx_buffer + 128 * macb->rx_tail;
+			buffer = macb->rx_buffer +
+				macb->rx_buffer_size * macb->rx_tail;
 			length = status & RXBUF_FRMLEN_MASK;
 
 			macb_invalidate_rx_buffer(macb);
 			if (macb->wrapped) {
 				unsigned int headlen, taillen;
 
-				headlen = 128 * (MACB_RX_RING_SIZE
-						 - macb->rx_tail);
+				headlen = macb->rx_buffer_size *
+					(MACB_RX_RING_SIZE - macb->rx_tail);
 				taillen = length - headlen;
 				memcpy((void *)net_rx_packets[0],
 				       buffer, headlen);
@@ -634,10 +643,12 @@ static int macb_phy_init(struct macb_device *macb, const char *name)
 
 	/* First check for GMAC and that it is GiB capable */
 	if (gem_is_gigabit_capable(macb)) {
-		lpa = macb_mdio_read(macb, MII_STAT1000);
+		lpa = macb_mdio_read(macb, MII_LPA);
 
-		if (lpa & (LPA_1000FULL | LPA_1000HALF)) {
-			duplex = ((lpa & LPA_1000FULL) ? 1 : 0);
+		if (lpa & (LPA_1000FULL | LPA_1000HALF | LPA_1000XFULL |
+					LPA_1000XHALF)) {
+			duplex = ((lpa & (LPA_1000FULL | LPA_1000XFULL)) ?
+					1 : 0);
 
 			printf("%s: link up, 1000Mbps %s-duplex (lpa: 0x%04x)\n",
 			       name,
@@ -734,7 +745,7 @@ static void gmac_configure_dma(struct macb_device *macb)
 	u32 buffer_size;
 	u32 dmacfg;
 
-	buffer_size = 128 / RX_BUFFER_MULTIPLE;
+	buffer_size = macb->rx_buffer_size / RX_BUFFER_MULTIPLE;
 	dmacfg = gem_readl(macb, DMACFG) & ~GEM_BF(RXBS, -1L);
 	dmacfg |= GEM_BF(RXBS, buffer_size);
 
@@ -779,7 +790,7 @@ static int _macb_init(struct macb_device *macb, const char *name)
 			paddr |= MACB_BIT(RX_WRAP);
 		macb->rx_ring[i].addr = paddr;
 		macb->rx_ring[i].ctrl = 0;
-		paddr += 128;
+		paddr += macb->rx_buffer_size;
 	}
 	macb_flush_ring_desc(macb, RX);
 	macb_flush_rx_buffer(macb);
@@ -833,9 +844,9 @@ static int _macb_init(struct macb_device *macb, const char *name)
 		}
 #else
 #if defined(CONFIG_RGMII) || defined(CONFIG_RMII)
-		gem_writel(macb, UR, GEM_BIT(RGMII));
+		gem_writel(macb, USRIO, GEM_BIT(RGMII));
 #else
-		gem_writel(macb, UR, 0);
+		gem_writel(macb, USRIO, 0);
 #endif
 #endif
 	} else {
@@ -990,8 +1001,14 @@ static void _macb_eth_initialize(struct macb_device *macb)
 	int id = 0;	/* This is not used by functions we call */
 	u32 ncfgr;
 
+	if (macb_is_gem(macb))
+		macb->rx_buffer_size = GEM_RX_BUFFER_SIZE;
+	else
+		macb->rx_buffer_size = MACB_RX_BUFFER_SIZE;
+
 	/* TODO: we need check the rx/tx_ring_dma is dcache line aligned */
-	macb->rx_buffer = dma_alloc_coherent(MACB_RX_BUFFER_SIZE,
+	macb->rx_buffer = dma_alloc_coherent(macb->rx_buffer_size *
+					     MACB_RX_RING_SIZE,
 					     &macb->rx_buffer_dma);
 	macb->rx_ring = dma_alloc_coherent(MACB_RX_DMA_DESC_SIZE,
 					   &macb->rx_ring_dma);
@@ -1202,6 +1219,7 @@ static int macb_enable_clk(struct udevice *dev)
 
 static const struct macb_config default_gem_config = {
 	.dma_burst_length = 16,
+	.clk_init = NULL,
 };
 
 static int macb_eth_probe(struct udevice *dev)
@@ -1222,8 +1240,7 @@ static int macb_eth_probe(struct udevice *dev)
 
 	macb->regs = (void *)pdata->iobase;
 
-	macb->is_big_endian = (cpu_to_be32(0x12345678) == 0x12345678) ?
-				true : false;
+	macb->is_big_endian = (cpu_to_be32(0x12345678) == 0x12345678);
 
 	macb->config = (struct macb_config *)dev_get_driver_data(dev);
 	if (!macb->config)
@@ -1291,6 +1308,7 @@ static int macb_eth_ofdata_to_platdata(struct udevice *dev)
 
 static const struct macb_config sama5d4_config = {
 	.dma_burst_length = 4,
+	.clk_init = NULL,
 };
 
 static const struct macb_config sifive_config = {
@@ -1306,6 +1324,7 @@ static const struct udevice_id macb_eth_ids[] = {
 	{ .compatible = "atmel,sama5d4-gem", .data = (ulong)&sama5d4_config },
 	{ .compatible = "cdns,zynq-gem" },
 	{ .compatible = "sifive,fu540-macb", .data = (ulong)&sifive_config },
+	{ .compatible = "sifive,fu540-c000-gem", .data = (ulong)&sifive_config },
 	{ }
 };
 

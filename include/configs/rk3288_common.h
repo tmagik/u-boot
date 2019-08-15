@@ -9,13 +9,16 @@
 #include <asm/arch-rockchip/hardware.h>
 #include "rockchip-common.h"
 
+#define CONFIG_SYS_BOOTM_LEN (16 << 20) /* 16MB */
+
 #define CONFIG_SKIP_LOWLEVEL_INIT_ONLY
 #define CONFIG_SYS_MALLOC_LEN		(32 << 20)
 #define CONFIG_SYS_CBSIZE		1024
 
-#define CONFIG_SYS_TIMER_RATE		(24 * 1000 * 1000)
-#define	CONFIG_SYS_TIMER_BASE		0xff810020 /* TIMER7 */
-#define CONFIG_SYS_TIMER_COUNTER	(CONFIG_SYS_TIMER_BASE + 8)
+#define CONFIG_ROCKCHIP_STIMER_BASE	0xff810020
+#define COUNTER_FREQUENCY		24000000
+#define CONFIG_SYS_ARCH_TIMER
+#define CONFIG_SYS_HZ_CLOCK		24000000
 
 #ifdef CONFIG_SPL_ROCKCHIP_BACK_TO_BROM
 /* Bootrom will load u-boot binary to 0x0 once return from SPL */
@@ -23,6 +26,8 @@
 #define CONFIG_SYS_INIT_SP_ADDR		0x00100000
 #define CONFIG_SYS_LOAD_ADDR		0x00800800
 #define CONFIG_SPL_STACK		0xff718000
+
+#define CONFIG_IRAM_BASE		0xff700000
 
 /* RAW SD card / eMMC locations. */
 #define CONFIG_SYS_SPI_U_BOOT_OFFS	(128 << 10)
@@ -34,6 +39,8 @@
 #define CONFIG_SYS_SDRAM_BASE		0
 #define SDRAM_BANK_SIZE			(2UL << 30)
 #define SDRAM_MAX_SIZE			0xfe000000
+
+#define CONFIG_SYS_MONITOR_LEN (600 * 1024)
 
 #ifndef CONFIG_SPL_BUILD
 /* usb otg */
@@ -62,7 +69,5 @@
 	ROCKCHIP_DEVICE_SETTINGS \
 	BOOTENV
 #endif
-
-#define CONFIG_PREBOOT
 
 #endif

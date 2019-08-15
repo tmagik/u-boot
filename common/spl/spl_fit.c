@@ -7,6 +7,7 @@
 #include <common.h>
 #include <errno.h>
 #include <fpga.h>
+#include <gzip.h>
 #include <image.h>
 #include <linux/libfdt.h>
 #include <spl.h>
@@ -340,6 +341,16 @@ static int spl_fit_image_get_os(const void *fit, int noffset, uint8_t *os)
 #endif
 }
 
+/*
+ * Weak default function to allow customizing SPL fit loading for load-only
+ * use cases by allowing to skip the parsing/processing of the FIT contents
+ * (so that this can be done separately in a more customized fashion)
+ */
+__weak bool spl_load_simple_fit_skip_processing(void)
+{
+	return false;
+}
+
 int spl_load_simple_fit(struct spl_image_info *spl_image,
 			struct spl_load_info *info, ulong sector, void *fit)
 {
@@ -388,6 +399,10 @@ int spl_load_simple_fit(struct spl_image_info *spl_image,
 
 	if (count == 0)
 		return -EIO;
+
+	/* skip further processing if requested to enable load-only use cases */
+	if (spl_load_simple_fit_skip_processing())
+		return 0;
 
 	/* find the node holding the images information */
 	images = fdt_path_offset(fit, FIT_IMAGES_PATH);

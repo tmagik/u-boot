@@ -65,7 +65,6 @@
 
 # define CONFIG_SYS_DFU_DATA_BUF_SIZE	0x600000
 # define DFU_DEFAULT_POLL_TIMEOUT	300
-# define CONFIG_USB_CABLE_CHECK
 # define CONFIG_THOR_RESET_OFF
 # define DFU_ALT_INFO_RAM \
 	"dfu_ram_info=" \
@@ -103,7 +102,6 @@
 #define CONFIG_ENV_OVERWRITE
 
 /* enable preboot to be loaded before CONFIG_BOOTDELAY */
-#define CONFIG_PREBOOT
 
 /* Boot configuration */
 #define CONFIG_SYS_LOAD_ADDR		0 /* default? */

@@ -50,6 +50,26 @@ so much easier [Ed]
 Maintainers List (try to look for most precise areas first)
 
 		-----------------------------------
+ANDROID AB
+M:	Igor Opaniuk <igor.opaniuk@gmail.com>
+R:	Sam Protsenko <semen.protsenko@linaro.org>
+S:	Maintained
+F:	cmd/ab_select.c
+F:	common/android_ab.c
+F:	doc/android/ab.txt
+F:	include/android_ab.h
+F:	test/py/tests/test_android/test_ab.py
+
+ANDROID AVB
+M:	Igor Opaniuk <igor.opaniuk@gmail.com>
+S:	Maintained
+F:	cmd/avb.c
+F:	common/avb_verify.c
+F:	doc/android/avb2.txt
+F:	include/avb_verify.h
+F:	lib/libavb/
+F:	test/py/tests/test_android/test_avb.py
+
 ARC
 M:	Alexey Brodkin <alexey.brodkin@synopsys.com>
 M:	Eugeniy Paltsev <Eugeniy.Paltsev@synopsys.com>
@@ -94,6 +114,7 @@ M:	Simon Goldschmidt <simon.k.r.goldschmidt@gmail.com>
 S:	Maintainted
 T:	git https://gitlab.denx.de/u-boot/custodians/u-boot-socfpga.git
 F:	arch/arm/mach-socfpga/
+F:	drivers/sysreset/sysreset_socfpga*
 
 ARM AMLOGIC SOC SUPPORT
 M:	Neil Armstrong <narmstrong@baylibre.com>
@@ -167,9 +188,11 @@ F:	board/freescale/*mx*/
 
 ARM HISILICON
 M:	Peter Griffin <peter.griffin@linaro.org>
+M:	Manivannan Sadhasivam <manivannan.sadhasivam@linaro.org>
 S:	Maintained
 F:	arch/arm/cpu/armv8/hisilicon
 F:	arch/arm/include/asm/arch-hi6220/
+F:	arch/arm/include/asm/arch-hi3660/
 
 ARM MARVELL KIRKWOOD ARMADA-XP ARMADA-38X ARMADA-37XX ARMADA-7K/8K
 M:	Stefan Roese <sr@denx.de>
@@ -195,6 +218,7 @@ F:	arch/arm/include/asm/arch-pxa/
 ARM MEDIATEK
 M:	Ryder Lee <ryder.lee@mediatek.com>
 M:	Weijie Gao <weijie.gao@mediatek.com>
+R:	GSS_MTK_Uboot_upstream <GSS_MTK_Uboot_upstream@mediatek.com>
 S:	Maintained
 F:	arch/arm/mach-mediatek/
 F:	arch/arm/include/asm/arch-mediatek/
@@ -205,7 +229,7 @@ F:	drivers/mmc/mtk-sd.c
 F:	drivers/pinctrl/mediatek/
 F:	drivers/power/domain/mtk-power-domain.c
 F:	drivers/ram/mediatek/
-F:	drivers/spi/mtk_qspi.c
+F:	drivers/spi/mtk_snfi_spi.c
 F:	drivers/timer/mtk_timer.c
 F:	drivers/watchdog/mtk_wdt.c
 F:	drivers/net/mtk_eth.c
@@ -311,6 +335,7 @@ F:	drivers/power/pmic/stpmic1.c
 F:	drivers/power/regulator/stm32-vrefbuf.c
 F:	drivers/power/regulator/stpmic1.c
 F:	drivers/ram/stm32mp1/
+F:	drivers/remoteproc/stm32_copro.c
 F:	drivers/misc/stm32_rcc.c
 F:	drivers/reset/stm32-reset.c
 F:	drivers/spi/stm32_qspi.c
@@ -444,6 +469,13 @@ T:	git https://gitlab.denx.de/u-boot/custodians/u-boot-cfi-flash.git
 F:	drivers/mtd/cfi_flash.c
 F:	drivers/mtd/jedec_flash.c
 
+CLOCK
+M:	Lukasz Majewski <lukma@denx.de>
+S:	Maintained
+T:	git git://git.denx.de/u-boot-dfu.git
+F:	drivers/clk/
+F:	drivers/clk/imx/
+
 COLDFIRE
 M:	Huan Wang <alison.wang@nxp.com>
 M:	Angelo Dureghello <angelo@sysam.it>
@@ -476,9 +508,7 @@ M:	Heinrich Schuchardt <xypron.glpk@gmx.de>
 R:	Alexander Graf <agraf@csgraf.de>
 S:	Maintained
 T:	git https://gitlab.denx.de/u-boot/custodians/u-boot-efi.git
-F:	doc/README.uefi
-F:	doc/README.iscsi
-F:	doc/efi.rst
+F:	doc/uefi/*
 F:	include/capitalization.h
 F:	include/charset.h
 F:	include/cp1250.h
@@ -606,7 +636,7 @@ T:	git https://gitlab.denx.de/u-boot/custodians/u-boot-nand-flash.git
 F:	drivers/mtd/nand/raw/
 
 NDS32
-M:	Macpaul Lin <macpaul@andestech.com>
+M:	Rick Chen <rick@andestech.com>
 S:	Maintained
 T:	git https://gitlab.denx.de/u-boot/custodians/u-boot-nds32.git
 F:	arch/nds32/
@@ -616,6 +646,7 @@ M:	Joe Hershberger <joe.hershberger@ni.com>
 S:	Maintained
 T:	git https://gitlab.denx.de/u-boot/custodians/u-boot-net.git
 F:	drivers/net/
+F:	include/net.h
 F:	net/
 
 NIOS
@@ -775,6 +806,11 @@ S:	Maintained
 F:	drivers/tee/
 F:	include/tee.h
 F:	include/tee/
+
+TEE-lib
+M:	Bryan O'Donoghue <bryan.odonoghue@linaro.org>
+S:	Maintained
+F:	lib/optee
 
 UBI
 M:	Kyungmin Park <kmpark@infradead.org>

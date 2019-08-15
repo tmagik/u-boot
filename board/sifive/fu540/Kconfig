@@ -40,7 +40,7 @@ config BOARD_SPECIFIC_OPTIONS # dummy
 	imply PHY_MSCC
 	imply SIFIVE_SERIAL
 	imply SPI
-	imply SIFIVE_SPI
+	imply SPI_SIFIVE
 	imply MMC
 	imply MMC_SPI
 	imply MMC_BROKEN_CD

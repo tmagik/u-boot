@@ -94,16 +94,6 @@ struct sifive_spi {
 	u32		num_cs;
 };
 
-static void sifive_spi_write(struct sifive_spi *spi, int offset, u32 value)
-{
-	writel(value, spi->regs + offset);
-}
-
-static u32 sifive_spi_read(struct sifive_spi *spi, int offset)
-{
-	return readl(spi->regs + offset);
-}
-
 static void sifive_spi_prep_device(struct sifive_spi *spi,
 				   struct dm_spi_slave_platdata *slave)
 {
@@ -112,10 +102,10 @@ static void sifive_spi_prep_device(struct sifive_spi *spi,
 		spi->cs_inactive &= ~BIT(slave->cs);
 	else
 		spi->cs_inactive |= BIT(slave->cs);
-	sifive_spi_write(spi, SIFIVE_SPI_REG_CSDEF, spi->cs_inactive);
+	writel(spi->cs_inactive, spi->regs + SIFIVE_SPI_REG_CSDEF);
 
 	/* Select the correct device */
-	sifive_spi_write(spi, SIFIVE_SPI_REG_CSID, slave->cs);
+	writel(slave->cs, spi->regs + SIFIVE_SPI_REG_CSID);
 }
 
 static int sifive_spi_set_cs(struct sifive_spi *spi,
@@ -123,21 +113,17 @@ static int sifive_spi_set_cs(struct sifive_spi *spi,
 {
 	u32 cs_mode = SIFIVE_SPI_CSMODE_MODE_HOLD;
 
-	if (slave->cs > spi->num_cs)
-		return -EINVAL;
-
 	if (slave->mode & SPI_CS_HIGH)
 		cs_mode = SIFIVE_SPI_CSMODE_MODE_AUTO;
 
-	sifive_spi_write(spi, SIFIVE_SPI_REG_CSMODE, cs_mode);
+	writel(cs_mode, spi->regs + SIFIVE_SPI_REG_CSMODE);
 
 	return 0;
 }
 
 static void sifive_spi_clear_cs(struct sifive_spi *spi)
 {
-	sifive_spi_write(spi, SIFIVE_SPI_REG_CSMODE,
-			 SIFIVE_SPI_CSMODE_MODE_AUTO);
+	writel(SIFIVE_SPI_CSMODE_MODE_AUTO, spi->regs + SIFIVE_SPI_REG_CSMODE);
 }
 
 static void sifive_spi_prep_transfer(struct sifive_spi *spi,
@@ -147,7 +133,7 @@ static void sifive_spi_prep_transfer(struct sifive_spi *spi,
 	u32 cr;
 
 	/* Modify the SPI protocol mode */
-	cr = sifive_spi_read(spi, SIFIVE_SPI_REG_FMT);
+	cr = readl(spi->regs + SIFIVE_SPI_REG_FMT);
 
 	/* Bits per word ? */
 	cr &= ~SIFIVE_SPI_FMT_LEN_MASK;
@@ -172,7 +158,7 @@ static void sifive_spi_prep_transfer(struct sifive_spi *spi,
 	if (!is_rx_xfer)
 		cr |= SIFIVE_SPI_FMT_DIR;
 
-	sifive_spi_write(spi, SIFIVE_SPI_REG_FMT, cr);
+	writel(cr, spi->regs + SIFIVE_SPI_REG_FMT);
 }
 
 static void sifive_spi_rx(struct sifive_spi *spi, u8 *rx_ptr)
@@ -180,7 +166,7 @@ static void sifive_spi_rx(struct sifive_spi *spi, u8 *rx_ptr)
 	u32 data;
 
 	do {
-		data = sifive_spi_read(spi, SIFIVE_SPI_REG_RXDATA);
+		data = readl(spi->regs + SIFIVE_SPI_REG_RXDATA);
 	} while (data & SIFIVE_SPI_RXDATA_EMPTY);
 
 	if (rx_ptr)
@@ -194,45 +180,10 @@ static void sifive_spi_tx(struct sifive_spi *spi, const u8 *tx_ptr)
 				SIFIVE_SPI_TXDATA_DATA_MASK;
 
 	do {
-		data = sifive_spi_read(spi, SIFIVE_SPI_REG_TXDATA);
+		data = readl(spi->regs + SIFIVE_SPI_REG_TXDATA);
 	} while (data & SIFIVE_SPI_TXDATA_FULL);
 
-	sifive_spi_write(spi, SIFIVE_SPI_REG_TXDATA, tx_data);
-}
-
-static u8 sifive_spi_txrx(struct sifive_spi *spi, const u8 *tx_ptr)
-{
-	u8 rx = 0;
-
-	sifive_spi_tx(spi, tx_ptr);
-	sifive_spi_rx(spi, &rx);
-
-	return rx;
-}
-
-static int sifive_spi_claim_bus(struct udevice *dev)
-{
-	int ret;
-	struct udevice *bus = dev->parent;
-	struct sifive_spi *spi = dev_get_priv(bus);
-	struct dm_spi_slave_platdata *slave = dev_get_parent_platdata(dev);
-
-	sifive_spi_prep_device(spi, slave);
-
-	ret = sifive_spi_set_cs(spi, slave);
-	if (ret)
-		return ret;
-
-	return 0;
-}
-
-static int sifive_spi_release_bus(struct udevice *dev)
-{
-	struct sifive_spi *spi = dev_get_priv(dev->parent);
-
-	sifive_spi_clear_cs(spi);
-
-	return 0;
+	writel(tx_data, spi->regs + SIFIVE_SPI_REG_TXDATA);
 }
 
 static int sifive_spi_xfer(struct udevice *dev, unsigned int bitlen,
@@ -242,8 +193,17 @@ static int sifive_spi_xfer(struct udevice *dev, unsigned int bitlen,
 	struct sifive_spi *spi = dev_get_priv(bus);
 	struct dm_spi_slave_platdata *slave = dev_get_parent_platdata(dev);
 	const unsigned char *tx_ptr = dout;
-	unsigned char *rx_ptr = din;
+	u8 *rx_ptr = din;
 	u32 remaining_len;
+	int ret;
+
+	if (flags & SPI_XFER_BEGIN) {
+		sifive_spi_prep_device(spi, slave);
+
+		ret = sifive_spi_set_cs(spi, slave);
+		if (ret)
+			return ret;
+	}
 
 	sifive_spi_prep_transfer(spi, true, slave);
 
@@ -257,7 +217,8 @@ static int sifive_spi_xfer(struct udevice *dev, unsigned int bitlen,
 		/* Enqueue n_words for transmission */
 		if (tx_ptr) {
 			for (tx_words = 0; tx_words < n_words; ++tx_words) {
-				sifive_spi_txrx(spi, tx_ptr);
+				sifive_spi_tx(spi, tx_ptr);
+				sifive_spi_rx(spi, NULL);
 				tx_ptr++;
 			}
 		}
@@ -265,13 +226,17 @@ static int sifive_spi_xfer(struct udevice *dev, unsigned int bitlen,
 		/* Read out all the data from the RX FIFO */
 		if (rx_ptr) {
 			for (rx_words = 0; rx_words < n_words; ++rx_words) {
-				*rx_ptr = sifive_spi_txrx(spi, NULL);
+				sifive_spi_tx(spi, NULL);
+				sifive_spi_rx(spi, rx_ptr);
 				rx_ptr++;
 			}
 		}
 
 		remaining_len -= n_words;
 	}
+
+	if (flags & SPI_XFER_END)
+		sifive_spi_clear_cs(spi);
 
 	return 0;
 }
@@ -287,7 +252,8 @@ static int sifive_spi_set_speed(struct udevice *bus, uint speed)
 	/* Cofigure max speed */
 	scale = (DIV_ROUND_UP(spi->freq >> 1, speed) - 1)
 					& SIFIVE_SPI_SCKDIV_DIV_MASK;
-	sifive_spi_write(spi, SIFIVE_SPI_REG_SCKDIV, scale);
+	writel(scale, spi->regs + SIFIVE_SPI_REG_SCKDIV);
+
 	return 0;
 }
 
@@ -297,21 +263,26 @@ static int sifive_spi_set_mode(struct udevice *bus, uint mode)
 	u32 cr;
 
 	/* Switch clock mode bits */
-	cr = sifive_spi_read(spi, SIFIVE_SPI_REG_SCKMODE) &
-					~SIFIVE_SPI_SCKMODE_MODE_MASK;
+	cr = readl(spi->regs + SIFIVE_SPI_REG_SCKMODE) &
+				~SIFIVE_SPI_SCKMODE_MODE_MASK;
 	if (mode & SPI_CPHA)
 		cr |= SIFIVE_SPI_SCKMODE_PHA;
 	if (mode & SPI_CPOL)
 		cr |= SIFIVE_SPI_SCKMODE_POL;
 
-	sifive_spi_write(spi, SIFIVE_SPI_REG_SCKMODE, cr);
+	writel(cr, spi->regs + SIFIVE_SPI_REG_SCKMODE);
 
 	return 0;
 }
 
 static int sifive_spi_cs_info(struct udevice *bus, uint cs,
-			  struct spi_cs_info *info)
+			      struct spi_cs_info *info)
 {
+	struct sifive_spi *spi = dev_get_priv(bus);
+
+	if (cs >= spi->num_cs)
+		return -EINVAL;
+
 	return 0;
 }
 
@@ -320,10 +291,10 @@ static void sifive_spi_init_hw(struct sifive_spi *spi)
 	u32 cs_bits;
 
 	/* probe the number of CS lines */
-	spi->cs_inactive = sifive_spi_read(spi, SIFIVE_SPI_REG_CSDEF);
-	sifive_spi_write(spi, SIFIVE_SPI_REG_CSDEF, 0xffffffffU);
-	cs_bits = sifive_spi_read(spi, SIFIVE_SPI_REG_CSDEF);
-	sifive_spi_write(spi, SIFIVE_SPI_REG_CSDEF, spi->cs_inactive);
+	spi->cs_inactive = readl(spi->regs + SIFIVE_SPI_REG_CSDEF);
+	writel(0xffffffffU, spi->regs + SIFIVE_SPI_REG_CSDEF);
+	cs_bits = readl(spi->regs + SIFIVE_SPI_REG_CSDEF);
+	writel(spi->cs_inactive, spi->regs + SIFIVE_SPI_REG_CSDEF);
 	if (!cs_bits) {
 		printf("Could not auto probe CS lines\n");
 		return;
@@ -336,18 +307,16 @@ static void sifive_spi_init_hw(struct sifive_spi *spi)
 	}
 
 	/* Watermark interrupts are disabled by default */
-	sifive_spi_write(spi, SIFIVE_SPI_REG_IE, 0);
+	writel(0, spi->regs + SIFIVE_SPI_REG_IE);
 
 	/* Set CS/SCK Delays and Inactive Time to defaults */
-	sifive_spi_write(spi, SIFIVE_SPI_REG_DELAY0,
-			 SIFIVE_SPI_DELAY0_CSSCK(1) |
-			 SIFIVE_SPI_DELAY0_SCKCS(1));
-	sifive_spi_write(spi, SIFIVE_SPI_REG_DELAY1,
-			 SIFIVE_SPI_DELAY1_INTERCS(1) |
-			 SIFIVE_SPI_DELAY1_INTERXFR(0));
+	writel(SIFIVE_SPI_DELAY0_CSSCK(1) | SIFIVE_SPI_DELAY0_SCKCS(1),
+	       spi->regs + SIFIVE_SPI_REG_DELAY0);
+	writel(SIFIVE_SPI_DELAY1_INTERCS(1) | SIFIVE_SPI_DELAY1_INTERXFR(0),
+	       spi->regs + SIFIVE_SPI_REG_DELAY1);
 
 	/* Exit specialized memory-mapped SPI flash mode */
-	sifive_spi_write(spi, SIFIVE_SPI_REG_FCTRL, 0);
+	writel(0, spi->regs + SIFIVE_SPI_REG_FCTRL);
 }
 
 static int sifive_spi_probe(struct udevice *bus)
@@ -380,8 +349,6 @@ static int sifive_spi_probe(struct udevice *bus)
 }
 
 static const struct dm_spi_ops sifive_spi_ops = {
-	.claim_bus	= sifive_spi_claim_bus,
-	.release_bus	= sifive_spi_release_bus,
 	.xfer		= sifive_spi_xfer,
 	.set_speed	= sifive_spi_set_speed,
 	.set_mode	= sifive_spi_set_mode,

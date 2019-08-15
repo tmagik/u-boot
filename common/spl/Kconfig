@@ -62,6 +62,25 @@ config SPL_SIZE_LIMIT_PROVIDE_STACK
 	  of SRAM available for SPL when the stack required before reolcation
 	  uses this SRAM, too.
 
+config SPL_SYS_STACK_F_CHECK_BYTE
+	hex
+	default 0xaa
+	help
+	  Constant used to check the stack
+
+config SPL_SYS_REPORT_STACK_F_USAGE
+	depends on SPL_SIZE_LIMIT_PROVIDE_STACK != 0
+	bool "Check and report stack usage in SPL before relocation"
+	help
+	  If this option is enabled, the initial SPL stack is filled with 0xaa
+	  very early, up to the size configured with
+	  SPL_SIZE_LIMIT_PROVIDE_STACK.
+	  Later when SPL is done using this initial stack and switches to a
+	  stack in DRAM, the actually used size of this initial stack is
+	  reported by examining the memory and searching for the lowest
+	  occurrence of non 0xaa bytes.
+	  This default implementation works for stacks growing down only.
+
 menu "PowerPC SPL Boot options"
 	depends on PPC && (SUPPORT_SPL && !SPL_FRAMEWORK)
 
@@ -116,6 +135,9 @@ config SPL_LDSCRIPT
 config SPL_TEXT_BASE
 	hex "SPL Text Base"
 	default ISW_ENTRY_ADDR if AM43XX || AM33XX || OMAP54XX || ARCH_KEYSTONE
+	default 0x10060 if MACH_SUN50I || MACH_SUN50I_H5 || MACH_SUN9I
+	default 0x20060 if MACH_SUN50I_H6
+	default 0x00060 if ARCH_SUNXI
 	default 0x0
 	help
 	  The address in memory that SPL will be running from.
@@ -244,6 +266,16 @@ config TPL_BANNER_PRINT
 	  If this option is enabled, SPL will not print the banner with version
 	  info. Disabling this option could be useful to reduce SPL boot time
 	  (e.g. approx. 6 ms faster, when output on i.MX6 with 115200 baud).
+
+config SPL_EARLY_BSS
+	depends on ARM && !ARM64
+	bool "Allows initializing BSS early before entering board_init_f"
+	help
+	  On some platform we have sufficient memory available early on to
+	  allow setting up and using a basic BSS prior to entering
+	  board_init_f. Activating this option will also de-activate the
+	  clearing of BSS during the SPL relocation process, thus allowing
+	  to carry state from board_init_f to board_init_r by way of BSS.
 
 config SPL_DISPLAY_PRINT
 	bool "Display a board-specific message in SPL"
@@ -905,6 +937,20 @@ config SPL_SATA_SUPPORT
 	  expense and power consumption. This enables loading from SATA
 	  using a configured device.
 
+config SPL_SATA_RAW_U_BOOT_USE_SECTOR
+	bool "SATA raw mode: by sector"
+	depends on SPL_SATA_SUPPORT
+	help
+	  Use sector number for specifying U-Boot location on SATA disk in
+	  raw mode.
+
+config SPL_SATA_RAW_U_BOOT_SECTOR
+	hex "Sector on the SATA disk to load U-Boot from"
+	depends on SPL_SATA_RAW_U_BOOT_USE_SECTOR
+	help
+	  Sector on the SATA disk to load U-Boot from, when the SATA disk is being
+	  used in raw mode. Units: SATA disk sectors (1 sector = 512 bytes).
+
 config SPL_SERIAL_SUPPORT
 	bool "Support serial"
 	select SPL_PRINTF
@@ -1048,6 +1094,7 @@ endif
 
 config SPL_WATCHDOG_SUPPORT
 	bool "Support watchdog drivers"
+	imply SPL_WDT if !HW_WATCHDOG
 	help
 	  Enable support for watchdog drivers in SPL. A watchdog is
 	  typically a hardware peripheral which can reset the system when it
