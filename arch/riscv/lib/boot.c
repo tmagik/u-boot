@@ -15,7 +15,7 @@ void do_go_smp(ulong hart, ulong fdt, ulong (*entry)(int, void *))
 	//csr_write(MTVEC, 0xfff7fa20);
 	asm volatile ( "li t4, 0xfff7fa20\n\t"
 			"csrw mtvec, t4\n\t");
-	printf("do_go_smp: hart: %d, fdt 0x%x\nx, entry 0x%x\n", hart, fdt, entry);
+	printf("do_go_smp: hart: %d, fdt 0x%x, entry 0x%x\n", hart, fdt, entry);
 	return entry(hart, fdt);
 }
 
@@ -23,9 +23,9 @@ void do_go_smp(ulong hart, ulong fdt, ulong (*entry)(int, void *))
 unsigned long do_go_exec(ulong (*entry)(int, char * const []),
 //			 int argc, char * const argv[])
 /*			overload this */
-			int hart, char * const fdt[])
+			int argc, char * const fdt[])
 {
-	printf("do_go_exec: hart: %d, fdt 0x%x\n", hart, fdt);
+	printf("do_go_exec( argc: %d, fdt 0x%x)\n", argc, fdt);
 	cleanup_before_linux();
 
 #if 0
@@ -50,7 +50,7 @@ unsigned long do_go_exec(ulong (*entry)(int, char * const []),
 #endif
 	smp_call_function(do_go_smp, fdt, entry);
 	//return entry(argc, argv);
-	return entry(hart, fdt);
+	printf("do_go_exec: calling entry(hart: %d, fdt 0x%x)\n", argc, fdt);
+	return entry(argc, fdt);
 	//return;
 }
-

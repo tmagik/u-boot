@@ -62,6 +62,7 @@
 #define HIFIVE_BASE_GPIO	0x10060000
 
 #define CONFIG_EXTRA_ENV_SETTINGS       \
+		"loadaddr=0x88000000\0" \
                 "ip_dyn=yes\0" \
                 "uboot_version=" __stringify(PLAIN_VERSION) "\0" \
                 "mmcsetup=mmc_spi 1 20000000 0; mmc part\0" \

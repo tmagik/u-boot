@@ -230,6 +230,7 @@ static unsigned long load_elf_image_shdr(unsigned long addr)
 	return ehdr->e_entry;
 }
 
+#if 0
 /* Allow ports to override the default behavior */
 static unsigned long do_bootelf_exec(ulong (*entry)(int, char * const[]),
 				     int argc, char * const argv[])
@@ -244,6 +245,7 @@ static unsigned long do_bootelf_exec(ulong (*entry)(int, char * const[]),
 
 	return ret;
 }
+#endif
 
 /*
  * Determine if a valid ELF image exists at the given memory location.
@@ -273,9 +275,12 @@ int valid_elf_image(unsigned long addr)
 int do_bootelf(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 {
 	unsigned long addr; /* Address of the ELF image */
+	unsigned long fdt; /* address of FDT, default from $fdtcontroladdr */
 	unsigned long rc; /* Return value from user code */
 	char *sload = NULL;
+	char *fload = NULL;
 	const char *ep = env_get("autostart");
+	const char *fdtstring = env_get("fdtcontroladdr");
 	int rcode = 0;
 
 	/* Consume 'bootelf' */
@@ -288,6 +293,15 @@ int do_bootelf(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		/* Consume flag. */
 		argc--; argv++;
 	}
+
+	/* Check for flag. */
+	if (argc >= 1 && (argv[0][0] == '-' && \
+				(argv[0][1] == 'f'))) {
+		fload = argv[0];
+		/* Consume flag. */
+		argc--; argv++;
+	}
+
 	/* Check for address. */
 	if (argc >= 1 && strict_strtoul(argv[0], 16, &addr) != -EINVAL) {
 		/* Consume address */
@@ -302,6 +316,13 @@ int do_bootelf(cmd_tbl_t *cmdtp, int flag, int argc, char * const argv[])
 		addr = load_elf_image_phdr(addr);
 	else
 		addr = load_elf_image_shdr(addr);
+
+	if (fload && fload[1] == 'f'){
+		if(strict_strtoul(fdtstring, 16, &fdt) != -EINVAL){
+			printf("Using FDT at 0x%x as arguments\n", fdt);
+		}
+		argv = fdt;
+	}
 
 	if (ep && !strcmp(ep, "no"))
 		return rcode;

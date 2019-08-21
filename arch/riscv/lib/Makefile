@@ -8,6 +8,7 @@
 
 obj-$(CONFIG_CMD_BOOTM) += bootm.o
 obj-$(CONFIG_CMD_BOOTI) += bootm.o image.o
+obj-$(CONFIG_CMD_ELF) += elf.o
 obj-$(CONFIG_CMD_GO) += boot.o
 obj-y	+= cache.o
 obj-$(CONFIG_RISCV_RDTIME) += rdtime.o
