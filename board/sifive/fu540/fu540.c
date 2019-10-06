@@ -108,8 +108,8 @@ static u32 fu540_read_serialnum(void)
 			printf("Board serial #%d\n", serial[0]);
 			return serial[0];
 		} else {
-			printf("%s: error, serial number corrupted in otp, 0x%x	0x%x\n",
-				serial[0], ~serial[1]);
+			printf("%s: error, serial# @%x corrupted in otp, 0x%08x 0x%08x\n",
+				__func__, i, serial[0], ~serial[1]);
 		}
 	}
 

@@ -57,7 +57,16 @@ int arch_cpu_init(void)
 {
 	/* this runs very early so printf is not up yet */
 	//printf("fu540 legacy arch_cpu_init -> enter\n");
-	g_aloe_prci->COREPLLCFG0 = 0x02110EC0u; /* Take PLL out of bypass */
+/* TODO: look at CLKMUXSTATUSREG like fsbl does */
+#if 0 /* defined CONFIG_1GHZ_INIT */
+	/* PLL_R(0) | PLL_F(59) | PLL_Q(2) | PLL_RANGE(0x04) | PLL_BYPASS(0) | PLL_FSE (1) */
+	g_aloe_prci->COREPLLCFG0 = 0x02110EC0u; /* Take PLL out of bypass, 1Ghz */
+	
+#else /* 500mhz */
+	/* PLL_R(0) | PLL_F(59) | PLL_Q(3) | PLL_RANGE(0x04) | PLL_BYPASS(0) | PLL_FSE (1) */\
+	g_aloe_prci->COREPLLCFG0 = 0x02118EC0u; /* Take PLL out of bypass, 500mhz */
+	//printf("fu540 init at 500Mhz\n");
+#endif
 	while((g_aloe_prci->COREPLLCFG0 & 0x80000000u) == 0); /* Wait for lock with PLL bypassed */
 
 	g_aloe_prci->COREPLLOUT  = 0x80000000u;
